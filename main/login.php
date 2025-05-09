@@ -6,17 +6,17 @@ $error_message = ''; // Переменная для сообщений об ош
 
 // Проверяем, была ли отправлена форма
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = trim($_POST['email']);
+    $identifier = trim($_POST['identifier']); // Будем использовать это поле для email или логина
     $password = $_POST['password'];
 
     // Простая валидация на клиенте уже есть (required), но серверная тоже не помешает
-    if (empty($email) || empty($password)) {
+    if (empty($identifier) || empty($password)) {
         $error_message = "Пожалуйста, заполните все поля.";
     } else {
         try {
-            // Ищем пользователя по email
-            $stmt = $pdo->prepare("SELECT id, email, password, role, accept FROM users WHERE email = ?");
-            $stmt->execute([$email]);
+            // Ищем пользователя по email или логину
+            $stmt = $pdo->prepare("SELECT id, email, login, password, role, accept FROM users WHERE email = ? OR login = ?");
+            $stmt->execute([$identifier, $identifier]); // Передаем $identifier дважды для каждого плейсхолдера
             $user = $stmt->fetch();
 
             if ($user) {
@@ -27,13 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         // Пароль верный
                         $_SESSION['user_id'] = $user['id'];
                         $_SESSION['user_email'] = $user['email']; // Можно добавить и другие данные, если нужны
+                        $_SESSION['user_login'] = $user['login']; // Сохраним и логин в сессию
                         $_SESSION['user_role'] = $user['role'];
                         // Перенаправляем на главную страницу или в личный кабинет
                         header("Location: ../index.php"); // Предполагаем, что главная страница в корне
                         exit();
                     } else {
                         // Неверный пароль
-                        $error_message = "Неверный email или пароль.";
+                        $error_message = "Неверный email/логин или пароль.";
                     }
                 } else {
                     // Email не подтвержден
@@ -41,11 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             } else {
                 // Пользователь с таким email не найден
-                $error_message = "Неверный email или пароль.";
+                $error_message = "Неверный email/логин или пароль.";
             }
         } catch (PDOException $e) {
             // Ошибка базы данных (можно залогировать $e->getMessage())
-            $error_message = "Произошла ошибка. Пожалуйста, попробуйте еще раз."; // Общее сообщение для пользователя
+            $error_message = "Произошла ошибка: " . $e->getMessage(); // Выводим ошибку для отладки
         }
     }
 }
@@ -56,13 +57,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
-    <link rel="stylesheet" href="template/css/main.css">
+    <title>Вход</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../template/css/main.css">
 </head>
 
-<body class="d-flex justify-content-center align-items-center vh-100">
+<body class="d-flex justify-content-center align-items-center vh-100 bg-light">
 
     <div class="container">
         <div class="row justify-content-center">
@@ -77,8 +77,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php endif; ?>
                         <form action="" method="post">
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="email" name="email" id="email" class="form-control" required="">
+                                <label for="identifier" class="form-label">Email или Логин</label>
+                                <input type="text" name="identifier" id="identifier" class="form-control" value="<?php echo isset($_POST['identifier']) ? htmlspecialchars($_POST['identifier']) : ''; ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Пароль</label>

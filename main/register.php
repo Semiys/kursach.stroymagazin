@@ -17,35 +17,46 @@ $success_message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Get and sanitize input
     $name = trim($_POST['name']);
+    $login = trim($_POST['login']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
 
     // Validate input
-    if (empty($name) || empty($email) || empty($password) || empty($confirm_password)) {
+    if (empty($name) || empty($login) || empty($email) || empty($password) || empty($confirm_password)) {
         $error_message = "Пожалуйста, заполните все поля.";
+    } elseif (strlen($login) < 3) {
+        $error_message = "Логин должен быть не менее 3 символов.";
+    } elseif (!preg_match('/^[a-zA-Z0-9_]+$/', $login)) {
+        $error_message = "Логин может содержать только латинские буквы, цифры и знак подчеркивания.";
     } elseif ($password !== $confirm_password) {
         $error_message = "Пароли не совпадают.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = "Некорректный формат email.";
     } else {
         // Check if email already exists
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([$email]);
-        if ($stmt->fetch()) {
+        $stmt_email = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt_email->execute([$email]);
+
+        // Check if login already exists
+        $stmt_login = $pdo->prepare("SELECT id FROM users WHERE login = ?");
+        $stmt_login->execute([$login]);
+
+        if ($stmt_email->fetch()) {
             $error_message = "Пользователь с таким email уже существует.";
+        } elseif ($stmt_login->fetch()) {
+            $error_message = "Пользователь с таким логином уже существует.";
         } else {
             // Hash the password
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             // Generate a unique confirmation token
-            $confirmation_token = bin2hex(random_bytes(32)); // Generates a 64-character hex token
+            $confirmation_token = bin2hex(random_bytes(32));
 
             // Insert user into the database
-            // Phone and address are optional for now based on the form
             try {
-                $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, confirm_token) VALUES (?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO users (name, login, email, password, role, confirm_token) VALUES (?, ?, ?, ?, ?, ?)");
                 // Default role to 'user'.
-                if ($stmt->execute([$name, $email, $hashed_password, 'user', $confirmation_token])) {
+                if ($stmt->execute([$name, $login, $email, $hashed_password, 'user', $confirmation_token])) {
 
                     // === НАЧАЛО КОДА ОТПРАВКИ EMAIL ===
                     $mail = new PHPMailer(true);
@@ -144,11 +155,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <form action="" method="post">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Имя</label>
-                                <input type="text" name="name" id="name" class="form-control" value="" required="">
+                                <input type="text" name="name" id="name" class="form-control" value="<?php echo isset($_POST['name']) ? htmlspecialchars($_POST['name']) : ''; ?>" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="login" class="form-label">Логин</label>
+                                <input type="text" name="login" id="login" class="form-control" value="<?php echo isset($_POST['login']) ? htmlspecialchars($_POST['login']) : ''; ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" name="email" id="email" class="form-control" value="" required="">
+                                <input type="email" name="email" id="email" class="form-control" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Пароль</label>
