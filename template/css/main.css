@@ -1,0 +1,149 @@
+footer {
+  background-color: #212529;
+  text-align: center;
+  color: whitesmoke;
+  padding: 20px;
+  margin-top: 50px;
+}
+
+.wrapper {
+  width: 100%;
+}
+
+body {
+  background-color: #f8f9fa;
+}
+
+.filter-sidebar {
+  background: white;
+  border-radius: 12px;
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+}
+
+.product-card {
+  background: white;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-image {
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px 12px 0 0;
+}
+
+.price {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.discount-badge {
+  top: 10px;
+  right: 10px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.wishlist-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: white;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wishlist-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.rating-stars {
+  color: #fbbf24;
+}
+
+.category-badge {
+  background: #e5e7eb;
+  color: #4b5563;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.filter-group {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.color-option {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+}
+
+.color-option.selected::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 2px solid #2563eb;
+  border-radius: 50%;
+}
+
+.sort-btn {
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.sort-btn:hover {
+  background: #f3f4f6;
+}
+
+.cart-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  transition: all 0.2s;
+}
+
+.cart-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.product-image {
+  max-height: 400px;
+  object-fit: cover;
+}
+.thumbnail {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+.thumbnail:hover,
+.thumbnail.active {
+  opacity: 1;
+}

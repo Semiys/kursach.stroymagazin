@@ -1,0 +1,29 @@
+# Файлы и папки Composer
+/vendor/
+# composer.lock # Закомментировано, так как для одного разработчика его можно коммитить
+
+# Файл с реальными конфигурационными данными
+config.php
+
+# Файлы конфигурации Open Server Panel
+/.osp/
+
+# Файл рабочего пространства VS Code (если специфичен для машины)
+KURSACH.code-workspace
+
+# Лог-файлы
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Системные файлы ОС
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Другие файлы IDE/редакторов (можно добавить по необходимости)
+# .idea/
+# *.swp
+# *~ 
