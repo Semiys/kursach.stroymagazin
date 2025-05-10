@@ -17,16 +17,16 @@ session_start(); // Запускаем сессию, если она еще не
                     <a class="nav-link" aria-current="page" href="/main/catalogue.php">Каталог</a>
                 </li>
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <li class="nav-item">
-                        <a class="nav-link" aria-current="page" href="/main/cart.php">Корзина</a>
-                    </li>
-                    <li class="nav-item">
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="/main/cart.php">Корзина</a>
+                </li>
+                <li class="nav-item">
                         <a class="nav-link" aria-current="page" href="/main/profile.php">Мой профиль (<?php echo htmlspecialchars($_SESSION['user_email']); ?>)</a>
-                    </li>
+                </li>
                     <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): // Пример проверки на админа ?>
-                        <li class="nav-item">
+                <li class="nav-item">
                             <a class="nav-link link-danger" aria-current="page" href="/admin/dashboard.php">Панель управления</a>
-                        </li>
+                </li>
                     <?php endif; ?>
                 <?php endif; ?>
             </ul>
