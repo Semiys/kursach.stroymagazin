@@ -145,7 +145,7 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION[
 
 // Расчет стоимости доставки и итоговой суммы
 $shipping_cost = $cart_is_empty ? 0 : 10.00; // Пример: доставка 10, если корзина не пуста
-$discount_amount = 0; // Пока скидок нет
+$discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0; // Скидка по промокоду
 $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
 ?>
 <!doctype html>
@@ -176,9 +176,9 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                         </div>
                     </div>
                 <?php else: ?>
-                    <!-- Cart Items -->
+                <!-- Cart Items -->
                     <div class="card mb-4" id="cart-items-container">
-                        <div class="card-body">
+                    <div class="card-body">
                             <?php foreach ($cart_products as $item_key => $item): ?>
                                 <div class="row cart-item mb-3 align-items-center" id="cart-item-row-<?php echo $item['id']; ?>">
                                     <div class="col-md-2 col-sm-3">
@@ -209,7 +209,7 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                                 <span class="text-danger">Нет на складе</span>
                                             <?php endif; ?>
                                         </p>
-                                    </div>
+                            </div>
                                     <div class="col-md-3 col-sm-6 mt-2 mt-md-0">
                                         <div class="cart-controls" data-product-id="<?php echo $item['id']; ?>" data-stock="<?php echo $item['stock_quantity']; ?>">
                                             <?php // Контролы количества будут добавлены сюда позже, когда будем подключать JS для них
@@ -226,18 +226,18 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                                 <a href="#" class="btn btn-outline-secondary btn-sm cart-action-btn <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'disabled'; ?>" 
                                                    data-action="add_to_cart"
                                                    <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'aria-disabled="true"'; ?>>+</a>
-                                            </div>
-                                        </div>
-                                    </div>
+                            </div>
+                                </div>
+                            </div>
                                     <div class="col-md-2 col-sm-4 mt-2 mt-md-0 text-end">
                                         <p class="fw-bold mb-1 price-per-item-<?php echo $item['id']; ?>"><?php echo number_format($item['price'], 0, '.', ' '); ?>₽/шт</p>
                                         <p class="fw-bold item-total-price-<?php echo $item['id']; ?>"><?php echo number_format($item['item_total_price'], 0, '.', ' '); ?>₽</p>
                                     </div>
                                     <div class="col-md-1 col-sm-2 mt-2 mt-md-0 text-end">
                                         <button class="btn btn-sm btn-outline-danger cart-action-btn" data-action="remove_from_cart" data-product-id="<?php echo $item['id']; ?>" title="Удалить товар">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                                 </div>
                                 <?php if ($item_key < count($cart_products) - 1): // Добавляем <hr> если это не последний элемент ?>
                                     <hr class="my-3">
@@ -280,18 +280,36 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                             <strong>Итого</strong>
                             <strong id="cart-grand-total"><?php echo number_format($grand_total, 0, '.', ' '); ?>₽</strong>
                         </div>
-                        <button class="btn btn-primary w-100 <?php if ($cart_is_empty) echo 'disabled'; ?>" <?php if ($cart_is_empty) echo 'disabled'; ?>>Перейти к оплате</button>
+                        <form action="checkout.php" method="POST">
+                            <input type="hidden" name="total_amount" value="<?php echo $grand_total; ?>">
+                            <?php if (isset($_SESSION['applied_promo_code'])): ?>
+                                <input type="hidden" name="promo_code" value="<?php echo htmlspecialchars($_SESSION['applied_promo_code']); ?>">
+                            <?php endif; ?>
+                            <button type="submit" class="btn btn-primary w-100 <?php if ($cart_is_empty) echo 'disabled'; ?>" <?php if ($cart_is_empty) echo 'disabled'; ?>>Перейти к оплате</button>
+                        </form>
                     </div>
                 </div>
                 <!-- Promo Code -->
                 <div class="card mt-4">
                     <div class="card-body">
                         <h5 class="card-title mb-3">Активировать промокод</h5>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" placeholder="Введите сюда промо-слово" <?php if ($cart_is_empty) echo 'disabled'; ?>>
-                            <button class="btn btn-outline-secondary" type="button" <?php if ($cart_is_empty) echo 'disabled'; ?>>Применить</button>
+                        <form id="promo-form" action="apply_promo.php" method="POST" class="mb-3">
+                            <div class="input-group">
+                                <input type="text" name="promo_code" class="form-control" placeholder="Введите сюда промо-слово" <?php if ($cart_is_empty) echo 'disabled'; ?>>
+                                <button class="btn btn-outline-secondary" type="submit" <?php if ($cart_is_empty) echo 'disabled'; ?>>Применить</button>
+                            </div>
+                        </form>
+                        <div id="promo-message">
+                            <?php if (isset($_SESSION['promo_message'])): ?>
+                                <div class="alert alert-<?php echo $_SESSION['promo_message']['type']; ?> small">
+                                    <?php echo $_SESSION['promo_message']['text']; ?>
+                                    <?php if (isset($_SESSION['applied_promo_code'])): ?>
+                                        <a href="remove_promo.php" class="float-end text-decoration-none">Удалить</a>
+                                    <?php endif; ?>
+                                </div>
+                                <?php unset($_SESSION['promo_message']); ?>
+                            <?php endif; ?>
                         </div>
-                        <!-- Здесь можно выводить сообщения о промокоде -->
                     </div>
                 </div>
             </div>
