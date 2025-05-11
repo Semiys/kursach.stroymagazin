@@ -2,6 +2,134 @@
 session_start();
 require_once '../config.php';
 
+// --- НАЧАЛО БЛОКА ОБРАБОТКИ КОРЗИНЫ ---
+// Определяем, это AJAX запрос или обычный, проверяя GET-параметр ajax=1
+$is_ajax_request = isset($_GET['ajax']) && $_GET['ajax'] === '1';
+
+if (isset($_GET['action']) && isset($_GET['id_to_cart'])) {
+    $product_id_action = filter_var($_GET['id_to_cart'], FILTER_VALIDATE_INT);
+    $action = $_GET['action'];
+    
+    $response_data = [
+        'success' => false,
+        'message' => '',
+        'new_quantity' => 0,
+        'product_id' => $product_id_action,
+        'total_cart_items' => 0,
+        'total_cart_quantity' => 0,
+        'stock_quantity' => 0
+    ];
+
+    if ($product_id_action) {
+        if (!isset($_SESSION['cart'])) {
+            $_SESSION['cart'] = [];
+        }
+
+        // На странице товара $product_id (ID текущего товара) уже должен быть определен ниже,
+        // если товар существует. Мы можем это использовать для проверки.
+        // Для AJAX важно убедиться, что товар, с которым работаем, существует.
+        $stmt_check_product_page = $pdo->prepare("SELECT id, stock_quantity FROM goods WHERE id = ?");
+        $stmt_check_product_page->execute([$product_id_action]);
+        $product_data_from_db_page = $stmt_check_product_page->fetch();
+
+        $response_data['stock_quantity'] = $product_data_from_db_page ? (int)$product_data_from_db_page['stock_quantity'] : 0;
+
+        if (!$product_data_from_db_page && ($action == 'add_to_cart' || $action == 'update_quantity' || $action == 'decrease_quantity')) {
+            $response_data['message'] = 'Ошибка: Товар не найден в базе данных.';
+        } else {
+            $current_stock_page = $product_data_from_db_page ? (int)$product_data_from_db_page['stock_quantity'] : 0;
+            $response_data['success'] = true;
+
+            if ($action == 'add_to_cart') {
+                $current_in_cart_page = isset($_SESSION['cart'][$product_id_action]) ? $_SESSION['cart'][$product_id_action] : 0;
+                if ($current_in_cart_page + 1 <= $current_stock_page) {
+                    $_SESSION['cart'][$product_id_action] = $current_in_cart_page + 1;
+                    $response_data['message'] = 'Товар добавлен в корзину!';
+                } else {
+                    $response_data['message'] = 'Недостаточно товара на складе. Доступно: ' . $current_stock_page . ', в корзине уже: ' . $current_in_cart_page;
+                    $response_data['success'] = false;
+                }
+            } elseif ($action == 'decrease_quantity') {
+                if (isset($_SESSION['cart'][$product_id_action])) {
+                    $_SESSION['cart'][$product_id_action]--;
+                    if ($_SESSION['cart'][$product_id_action] <= 0) {
+                        unset($_SESSION['cart'][$product_id_action]);
+                        $response_data['message'] = 'Товар удален из корзины.';
+                    } else {
+                        $response_data['message'] = 'Количество товара уменьшено.';
+                    }
+                } else {
+                    $response_data['message'] = 'Товара не было в корзине.';
+                    $response_data['success'] = false;
+                }
+            } elseif ($action == 'remove_from_cart') {
+                if (isset($_SESSION['cart'][$product_id_action])) {
+                    unset($_SESSION['cart'][$product_id_action]);
+                    $response_data['message'] = 'Товар полностью удален из корзины.';
+                } else {
+                    $response_data['message'] = 'Товара не было в корзине для удаления.';
+                    $response_data['success'] = false;
+                }
+            } elseif ($action == 'update_quantity') {
+                $new_qty_page = isset($_GET['qty']) ? filter_var($_GET['qty'], FILTER_VALIDATE_INT) : false;
+                if ($new_qty_page !== false && $new_qty_page > 0) {
+                    if ($new_qty_page <= $current_stock_page) {
+                        $_SESSION['cart'][$product_id_action] = $new_qty_page;
+                        $response_data['message'] = 'Количество товара обновлено.';
+                    } else {
+                        $response_data['message'] = 'Невозможно установить количество: ' . $new_qty_page . '. На складе: ' . $current_stock_page . '.';
+                        $response_data['success'] = false;
+                    }
+                } elseif ($new_qty_page !== false && $new_qty_page <= 0) {
+                    unset($_SESSION['cart'][$product_id_action]);
+                    $response_data['message'] = 'Товар удален (количество 0 или меньше).';
+                } else {
+                    $response_data['message'] = 'Неверное количество для обновления.';
+                    $response_data['success'] = false;
+                }
+            }
+            $response_data['new_quantity'] = isset($_SESSION['cart'][$product_id_action]) ? $_SESSION['cart'][$product_id_action] : 0;
+        }
+    } else {
+        $response_data['message'] = 'Ошибка: Неверный ID товара для действия с корзиной.';
+    }
+
+    if (isset($_SESSION['cart'])) {
+        $response_data['total_cart_items'] = count($_SESSION['cart']);
+        $response_data['total_cart_quantity'] = array_sum($_SESSION['cart']);
+    }
+
+    if ($is_ajax_request) {
+        header('Content-Type: application/json');
+        echo json_encode($response_data);
+        exit();
+    } else {
+        if (!empty($response_data['message'])) {
+            $_SESSION['flash_message'] = ['type' => $response_data['success'] ? 'success' : 'danger', 'text' => $response_data['message']];
+        }
+        // Для product.php $product_id должен быть определен ниже, если мы на странице конкретного товара
+        // Этот $product_id используется для формирования return_url по умолчанию, если он не передан
+        // Важно: $product_id здесь - это ID товара, отображаемого на странице, а не $product_id_action
+        global $product_id; // Делаем $product_id (который определяется ниже) доступным
+        $return_url = isset($_GET['return_url']) ? urldecode($_GET['return_url']) : (isset($product_id) ? 'product.php?id='.$product_id : 'catalogue.php');
+        header("Location: " . $return_url);
+        exit();
+    }
+}
+
+// Отображение flash-сообщений (если есть)
+$flash_message_html = '';
+if (isset($_SESSION['flash_message'])) {
+    $flash_type = $_SESSION['flash_message']['type'] ?? 'info';
+    $flash_text = $_SESSION['flash_message']['text'] ?? '';
+    $flash_message_html = "<div class='container mt-3'><div class='alert alert-{$flash_type} alert-dismissible fade show' role='alert'>
+                            {$flash_text}
+                            <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+                          </div></div>";
+    unset($_SESSION['flash_message']);
+}
+// --- КОНЕЦ БЛОКА ОБРАБОТКИ КОРЗИНЫ ---
+
 $product_id = null;
 $product = null;
 $error_message = '';
@@ -10,7 +138,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $product_id = (int)$_GET['id'];
 
     try {
-        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images FROM goods WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images, stock_quantity FROM goods WHERE id = ?");
         $stmt->execute([$product_id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -101,6 +229,7 @@ if (isset($_SESSION['user_id']) && $product) {
 
 <body>
     <?php include_once "../template/header.php" ?>
+    <?php echo $flash_message_html; // Выводим flash сообщение здесь ?>
 
 <?php if (!empty($error_message)): ?>
     <div class="container mt-5">
@@ -180,9 +309,38 @@ if (isset($_SESSION['user_id']) && $product) {
                     <?php endif; ?>
                 </div>
                 <p class="mb-4"><?php echo htmlspecialchars($product['short_description'] ?? ($product['discr'] ?? 'Описание отсутствует.')); ?></p>
-                <button class="btn btn-primary btn-lg mb-3 me-2">
-                    <i class="bi bi-cart-plus"></i> Добавить в корзину
-                </button>
+                <div class="mb-3 product-stock-info">
+                    <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
+                        <p class="text-success"><i class="bi bi-check-circle-fill"></i> В наличии (<?php echo $product['stock_quantity']; ?> шт.)</p>
+                    <?php else: ?>
+                        <p class="text-danger"><i class="bi bi-x-circle-fill"></i> Нет в наличии</p>
+                    <?php endif; ?>
+                </div>
+                <?php 
+                    $product_id_for_template_prod_page = $product['id'];
+                    $product_stock_quantity_prod_page = isset($product['stock_quantity']) ? (int)$product['stock_quantity'] : 0;
+                    $product_in_cart_quantity_product_page = isset($_SESSION['cart'][$product_id_for_template_prod_page]) ? $_SESSION['cart'][$product_id_for_template_prod_page] : 0;
+                ?>
+                <div class="cart-controls mb-3" data-product-id="<?php echo $product_id_for_template_prod_page; ?>" data-stock="<?php echo $product_stock_quantity_prod_page; ?>">
+                    <?php if ($product_stock_quantity_prod_page > 0): ?>
+                        <?php if ($product_in_cart_quantity_product_page > 0): ?>
+                            <div class="d-flex align-items-center">
+                                <span class="me-3">Количество:</span>
+                                <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 150px;">
+                                    <a href="#" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="decrease_quantity">-</a>
+                                    <input type="number" class="form-control form-control-lg text-center product-quantity-input" value="<?php echo $product_in_cart_quantity_product_page; ?>" min="0" max="<?php echo $product_stock_quantity_prod_page; ?>" data-action="update_quantity">
+                                    <a href="#" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="add_to_cart">+</a>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <a href="#" class="btn btn-primary btn-lg cart-action-btn" data-action="add_to_cart">
+                                <i class="bi bi-cart-plus"></i> Добавить в корзину
+                            </a>
+                        <?php endif; ?>
+                    <?php else: // Товара нет на складе ?>
+                         <button class="btn btn-secondary btn-lg" disabled><i class="bi bi-cart-x"></i> Нет в наличии</button>
+                    <?php endif; ?>
+                </div>
                 <div class="mb-3 rating-widget-container">
                     <h6>Оцените товар:</h6>
                     <div class="stars-rating mb-2 <?php if ($user_has_rated) echo 'rated'; ?>" 

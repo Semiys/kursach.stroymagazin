@@ -18,7 +18,22 @@ session_start(); // Запускаем сессию, если она еще не
                 </li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                 <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="/main/cart.php">Корзина</a>
+                    <a class="nav-link" aria-current="page" href="/main/cart.php">
+                        Корзина 
+                        <?php 
+                            // Отображаем общее количество товаров в корзине (сумма всех quantity)
+                            $total_quantity_in_header = 0;
+                            if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
+                                $total_quantity_in_header = array_sum($_SESSION['cart']);
+                            }
+                            $badge_class = ($total_quantity_in_header > 0) ? '' : ' d-none'; // Добавляем d-none если пусто
+                        ?>
+                        <span class="badge bg-primary rounded-pill cart-total-quantity-badge<?php echo $badge_class; ?>">
+                            <?php 
+                                echo $total_quantity_in_header > 0 ? $total_quantity_in_header : ''; 
+                            ?>
+                        </span>
+                    </a>
                 </li>
                 <li class="nav-item">
                         <a class="nav-link" aria-current="page" href="/main/profile.php">Мой профиль (<?php echo htmlspecialchars($_SESSION['user_email']); ?>)</a>
