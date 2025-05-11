@@ -116,6 +116,57 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault();
         const target = event.currentTarget;
         const controlsContainer = target.closest('.cart-controls');
+        // Если кнопка удаления в корзине находится не внутри контейнера .cart-controls
+        if (!controlsContainer && target.dataset.action === 'remove_from_cart') {
+            // Получаем productId напрямую из атрибута кнопки
+            const productId = target.dataset.productId;
+            if (productId) {
+                // Показываем глобальное уведомление об удалении
+                showGlobalNotification('Удаление товара...', 'info');
+                
+                // Формируем URL для удаления товара
+                let ajaxUrl = `${ROOT_PATH}cart.php?action=remove_from_cart&id_to_cart=${productId}&ajax=1`;
+                
+                // Отправляем запрос на удаление
+                fetch(ajaxUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка сети: ' + response.status);
+                        }
+                        return response.text().then(text => {
+                            try {
+                                return JSON.parse(text);
+                            } catch (e) {
+                                if (text.includes('<html') || text.includes('<body') || text.includes('<nav')) {
+                                    throw new Error('Получен HTML вместо JSON. Проверьте, что header.php не включается для AJAX-запросов.');
+                                } else {
+                                    throw new Error('Некорректный формат ответа от сервера');
+                                }
+                            }
+                        });
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Обновляем индикатор корзины
+                            updateCartBadge(data.total_cart_quantity);
+                            showGlobalNotification('Товар удален из корзины', 'success');
+                            // Перезагружаем страницу для обновления содержимого корзины
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            console.error('Remove item error:', data.message);
+                            showGlobalNotification('Не удалось удалить товар: ' + data.message, 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        showGlobalNotification('Ошибка при удалении товара: ' + error.message, 'danger');
+                    });
+                return; // Выходим из функции, так как запрос уже отправлен
+            }
+        }
+        
         if (!controlsContainer) return;
 
         const productId = controlsContainer.dataset.productId;
@@ -137,6 +188,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 return; // Stop further action
             }
+        }
+        
+        // Покажем сначала уведомление о том, что действие выполняется
+        if (action === 'add_to_cart') {
+            showProductNotification(productId, 'Добавление товара...', 'info', 1000);
+        } else if (action === 'decrease_quantity') {
+            showProductNotification(productId, 'Уменьшение количества...', 'info', 1000);
+        } else if (action === 'update_quantity') {
+            showProductNotification(productId, 'Обновление количества...', 'info', 1000);
+        } else if (action === 'remove_from_cart') {
+            showProductNotification(productId, 'Удаление товара...', 'info', 1000);
         }
 
         // Определяем полный путь к обработчику
@@ -179,13 +241,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!response.ok) {
                     throw new Error('Ошибка сети: ' + response.status);
                 }
-                return response.json();
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        if (text.includes('<html') || text.includes('<body') || text.includes('<nav')) {
+                            console.error('Получен HTML вместо JSON:', text.substring(0, 100) + '...');
+                            throw new Error('Получен HTML вместо JSON. Проверьте код серверной части.');
+                        } else {
+                            console.error('Некорректный JSON:', text);
+                            throw new Error('Сервер вернул некорректный формат данных.');
+                        }
+                    }
+                });
             })
             .then(data => {
                 console.log('AJAX response data:', data);
                 if (data.success) {
                     updateCartControls(data.product_id, data.new_quantity, data.stock_quantity);
                     updateCartBadge(data.total_cart_quantity);
+                    
+                    // Показываем уведомление об успешном действии
+                    if (action === 'add_to_cart') {
+                        showProductNotification(productId, 'Товар добавлен в корзину!', 'success');
+                    } else if (action === 'update_quantity') {
+                        showProductNotification(productId, 'Количество обновлено', 'success');
+                    } else if (action === 'remove_from_cart') {
+                        // Если мы на странице корзины и удаляем товар, перезагружаем страницу
+                        if (window.location.pathname.includes('cart.php')) {
+                            showProductNotification(productId, 'Товар удален из корзины', 'success');
+                            // Маленькая задержка, чтобы пользователь увидел сообщение
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            showProductNotification(productId, 'Товар удален из корзины', 'success');
+                        }
+                    }
                 } else {
                     console.error('Cart action error:', data.message);
                     showProductNotification(productId, data.message, 'danger');
@@ -197,8 +289,13 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Fetch error:', error);
-                // Более подробное сообщение об ошибке для отладки
-                showProductNotification(productId, 'Ошибка при обновлении корзины: ' + error.message, 'danger');
+                // Более конкретное сообщение в случае отсутствия подключения
+                if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+                    showProductNotification(productId, 'Ошибка соединения с сервером. Проверьте подключение к интернету.', 'danger');
+                } else {
+                    // Более подробное сообщение об ошибке для отладки
+                    showProductNotification(productId, 'Ошибка: ' + error.message, 'danger');
+                }
             });
     }
 
@@ -257,14 +354,73 @@ document.addEventListener('DOMContentLoaded', function () {
         attachCartActionListeners(controlsDiv);
     });
 
+    // Добавляем обработчик для кнопки "Очистить корзину"
+    const clearCartBtn = document.getElementById('clear-cart-btn');
+    if (clearCartBtn) {
+        clearCartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Заменяем confirm на вывод уведомления перед отправкой запроса
+            showGlobalNotification('Очистка корзины...', 'info');
+            
+            // Формируем URL для AJAX запроса очистки корзины
+            let ajaxUrl = `${ROOT_PATH}cart.php?action=clear_cart&ajax=1`;
+            
+            fetch(ajaxUrl)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error('Ошибка сети: ' + response.status);
+                    }
+                    
+                    // Попробуем прочитать содержимое ответа как текст
+                    return response.text().then(text => {
+                        try {
+                            // Попытка распарсить JSON
+                            return JSON.parse(text);
+                        } catch (e) {
+                            // Если не удалось распарсить как JSON, проверим наличие HTML
+                            if (text.includes('<html') || text.includes('<body') || text.includes('<nav')) {
+                                console.error('Получен HTML вместо JSON:', text.substring(0, 100) + '...');
+                                throw new Error('Получен HTML вместо JSON. Проверьте, что header.php не включается для AJAX-запросов.');
+                            } else {
+                                console.error('Некорректный JSON:', text);
+                                throw new Error('Некорректный формат ответа от сервера');
+                            }
+                        }
+                    });
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Обновляем индикатор корзины
+                        updateCartBadge(0);
+                        showGlobalNotification('Корзина успешно очищена', 'success');
+                        // Перезагружаем страницу для обновления содержимого корзины
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    } else {
+                        console.error('Clear cart error:', data.message);
+                        showGlobalNotification('Не удалось очистить корзину: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch error:', error);
+                    if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+                        showGlobalNotification('Ошибка соединения с сервером. Проверьте подключение к интернету.', 'danger');
+                    } else {
+                        showGlobalNotification('Ошибка при очистке корзины: ' + error.message, 'danger');
+                    }
+                });
+        });
+    }
+
     // Функция для отображения временных уведомлений под элементом управления товаром
     function showProductNotification(productId, message, type = 'danger', duration = 3500) {
         const controlsContainer = document.querySelector(`.cart-controls[data-product-id="${productId}"]`);
         if (!controlsContainer) {
-            // Если контролы не найдены, можно показать глобальное сообщение или просто залогировать
-            console.warn(`Controls container not found for product ID ${productId} to show message: ${message}`);
-            // Как запасной вариант, покажем старый alert для таких случаев или более глобальное уведомление
-            alert(message); // Временный fallback
+            // Если контролы не найдены, показываем глобальное уведомление
+            showGlobalNotification(message, type);
             return;
         }
 
@@ -284,6 +440,50 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setTimeout(() => {
             messageDiv.remove();
+        }, duration);
+    }
+
+    // Функция для отображения глобальных уведомлений
+    function showGlobalNotification(message, type = 'info', duration = 3500) {
+        // Проверяем, есть ли уже контейнер для глобальных уведомлений
+        let notifContainer = document.getElementById('global-notifications');
+        if (!notifContainer) {
+            notifContainer = document.createElement('div');
+            notifContainer.id = 'global-notifications';
+            notifContainer.className = 'position-fixed top-0 end-0 p-3';
+            notifContainer.style.zIndex = '1050';
+            document.body.appendChild(notifContainer);
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `toast alert alert-${type} show`;
+        notification.role = 'alert';
+        notification.ariaLive = 'assertive';
+        notification.ariaAtomic = 'true';
+        
+        notification.innerHTML = `
+            <div class="toast-header">
+                <strong class="me-auto">Уведомление</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        `;
+
+        notifContainer.appendChild(notification);
+
+        // Устанавливаем обработчик закрытия
+        const closeBtn = notification.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                notification.remove();
+            });
+        }
+
+        // Автоматически удаляем уведомление через указанное время
+        setTimeout(() => {
+            notification.remove();
         }, duration);
     }
 

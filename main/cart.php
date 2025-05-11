@@ -1,13 +1,89 @@
 <?php
-include '../template/header.php'; // This should start the session
+// НЕ включаем header.php сразу для AJAX-запросов
+// Сначала проверяем, это AJAX-запрос или нет
+$is_ajax_request = isset($_GET['ajax']) && $_GET['ajax'] === '1';
+
+// Если это не AJAX-запрос, включаем header.php
+if (!$is_ajax_request) {
+    include '../template/header.php'; // This should start the session
+} else {
+    // Для AJAX-запросов нужны только сессии, но не вывод HTML
+    session_start();
+}
+
 require_once '../config.php'; // Подключаем конфигурацию для доступа к $pdo
 // Теперь у нас есть доступ к переменной $pdo для работы с базой данных
+
+// Обработка действия очистки корзины
+if (isset($_GET['action']) && $_GET['action'] === 'clear_cart') {
+    $_SESSION['cart'] = []; // Очищаем корзину
+    
+    if ($is_ajax_request) {
+        header('Content-Type: application/json');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        echo json_encode([
+            'success' => true,
+            'message' => 'Корзина очищена',
+            'total_cart_items' => 0,
+            'total_cart_quantity' => 0
+        ]);
+        exit;
+    } else {
+        // Для не-AJAX запросов
+        $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Корзина успешно очищена'];
+        header("Location: cart.php");
+        exit;
+    }
+}
+
+// Обрабатываем действие удаления отдельного товара
+if (isset($_GET['action']) && $_GET['action'] === 'remove_from_cart' && isset($_GET['id_to_cart'])) {
+    $product_id = (int)$_GET['id_to_cart'];
+    
+    if (isset($_SESSION['cart'][$product_id])) {
+        unset($_SESSION['cart'][$product_id]);
+        
+        if ($is_ajax_request) {
+            header('Content-Type: application/json');
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            
+            // Считаем общее количество товаров в корзине
+            $total_cart_items = count($_SESSION['cart']);
+            $total_cart_quantity = array_sum($_SESSION['cart']);
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Товар удален из корзины',
+                'product_id' => $product_id,
+                'new_quantity' => 0,
+                'total_cart_items' => $total_cart_items,
+                'total_cart_quantity' => $total_cart_quantity
+            ]);
+            exit;
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Товар удален из корзины'];
+            header("Location: cart.php");
+            exit;
+        }
+    }
+}
 
 // Инициализация переменных для работы с корзиной
 $cart_products = [];
 $total_cart_value = 0;
 $cart_is_empty = true;
 $flash_message_html = ''; // Для flash сообщений (если они будут на этой странице)
+
+// Отображение flash-сообщений (если есть)
+if (isset($_SESSION['flash_message'])) {
+    $flash_type = $_SESSION['flash_message']['type'] ?? 'info';
+    $flash_text = $_SESSION['flash_message']['text'] ?? '';
+    $flash_message_html = "<div class='container mt-3'><div class='alert alert-{$flash_type} alert-dismissible fade show' role='alert'>
+                            {$flash_text}
+                            <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+                          </div></div>";
+    unset($_SESSION['flash_message']);
+}
 
 // Загрузка данных корзины для отображения
 if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION['cart'])) {
@@ -154,8 +230,8 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                         </div>
                                     </div>
                                     <div class="col-md-2 col-sm-4 mt-2 mt-md-0 text-end">
-                                        <p class="fw-bold mb-1 price-per-item-<?php echo $item['id']; ?>"><?php echo number_format($item['price'], 2, '.', ' '); ?>₽/шт</p>
-                                        <p class="fw-bold item-total-price-<?php echo $item['id']; ?>"><?php echo number_format($item['item_total_price'], 2, '.', ' '); ?>₽</p>
+                                        <p class="fw-bold mb-1 price-per-item-<?php echo $item['id']; ?>"><?php echo number_format($item['price'], 0, '.', ' '); ?>₽/шт</p>
+                                        <p class="fw-bold item-total-price-<?php echo $item['id']; ?>"><?php echo number_format($item['item_total_price'], 0, '.', ' '); ?>₽</p>
                                     </div>
                                     <div class="col-md-1 col-sm-2 mt-2 mt-md-0 text-end">
                                         <button class="btn btn-sm btn-outline-danger cart-action-btn" data-action="remove_from_cart" data-product-id="<?php echo $item['id']; ?>" title="Удалить товар">
@@ -175,6 +251,11 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                     <a href="/main/catalogue.php" class="btn btn-outline-primary">
                         <i class="bi bi-arrow-left me-2"></i>Продолжить покупки
                     </a>
+                    <?php if (!$cart_is_empty): ?>
+                    <a href="#" id="clear-cart-btn" class="btn btn-outline-danger ms-2">
+                        <i class="bi bi-trash me-2"></i>Очистить корзину
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="col-lg-4">
@@ -184,20 +265,20 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                         <h5 class="card-title mb-4">Сумма заказа</h5>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Стоимость товаров</span>
-                            <span id="cart-subtotal"><?php echo number_format($total_cart_value, 2, '.', ' '); ?>₽</span>
+                            <span id="cart-subtotal"><?php echo number_format($total_cart_value, 0, '.', ' '); ?>₽</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Доставка</span>
-                            <span id="cart-shipping"><?php echo number_format($shipping_cost, 2, '.', ' '); ?>₽</span>
+                            <span id="cart-shipping"><?php echo number_format($shipping_cost, 0, '.', ' '); ?>₽</span>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span>Скидка</span>
-                            <span id="cart-discount" class="text-success">-<?php echo number_format($discount_amount, 2, '.', ' '); ?>₽</span>
+                            <span id="cart-discount" class="text-success">-<?php echo number_format($discount_amount, 0, '.', ' '); ?>₽</span>
                         </div>
                         <hr>
                         <div class="d-flex justify-content-between mb-4">
                             <strong>Итого</strong>
-                            <strong id="cart-grand-total"><?php echo number_format($grand_total, 2, '.', ' '); ?>₽</strong>
+                            <strong id="cart-grand-total"><?php echo number_format($grand_total, 0, '.', ' '); ?>₽</strong>
                         </div>
                         <button class="btn btn-primary w-100 <?php if ($cart_is_empty) echo 'disabled'; ?>" <?php if ($cart_is_empty) echo 'disabled'; ?>>Перейти к оплате</button>
                     </div>
@@ -224,8 +305,93 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js"
         integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+"
         crossorigin="anonymous"></script>
-    <!-- cart_ajax.js уже подключается в footer.php, так что здесь он не нужен повторно, если footer.php его содержит -->
-    <?php // Если cart_ajax.js не подключен в footer.php, его нужно будет подключить здесь или убедиться, что он есть в footer ?>
+    <!-- Добавляем прямые обработчики для кнопок удаления -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Функция для отображения уведомлений в стиле Bootstrap
+            function showNotification(message, type = 'info', duration = 3000) {
+                // Создаем контейнер для уведомлений, если его еще нет
+                let notifContainer = document.getElementById('global-notifications');
+                if (!notifContainer) {
+                    notifContainer = document.createElement('div');
+                    notifContainer.id = 'global-notifications';
+                    notifContainer.className = 'position-fixed top-0 end-0 p-3';
+                    notifContainer.style.zIndex = '1050';
+                    document.body.appendChild(notifContainer);
+                }
+
+                // Создаем само уведомление
+                const notification = document.createElement('div');
+                notification.className = `toast alert alert-${type} show`;
+                notification.role = 'alert';
+                notification.ariaLive = 'assertive';
+                notification.ariaAtomic = 'true';
+                
+                notification.innerHTML = `
+                    <div class="toast-header">
+                        <strong class="me-auto">Уведомление</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                `;
+
+                notifContainer.appendChild(notification);
+
+                // Устанавливаем обработчик закрытия
+                const closeBtn = notification.querySelector('.btn-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => {
+                        notification.remove();
+                    });
+                }
+
+                // Автоматически удаляем уведомление через указанное время
+                setTimeout(() => {
+                    notification.remove();
+                }, duration);
+            }
+
+            // Находим все кнопки удаления товаров в корзине
+            const deleteButtons = document.querySelectorAll('.btn[data-action="remove_from_cart"]');
+            
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const productId = this.dataset.productId;
+                    if (productId) {
+                        // Показываем уведомление
+                        showNotification('Удаление товара из корзины...', 'info');
+                        
+                        // Формируем URL для удаления товара
+                        const ajaxUrl = `/main/cart.php?action=remove_from_cart&id_to_cart=${productId}&ajax=1`;
+                        
+                        // Отправляем запрос
+                        fetch(ajaxUrl)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Показываем уведомление об успешном удалении
+                                    showNotification('Товар удален из корзины', 'success');
+                                    // Задержка для отображения уведомления
+                                    setTimeout(() => {
+                                        // Перезагружаем страницу, чтобы обновить корзину
+                                        window.location.reload();
+                                    }, 500);
+                                } else {
+                                    showNotification('Ошибка удаления товара: ' + data.message, 'danger');
+                                }
+                            })
+                            .catch(error => {
+                                showNotification('Ошибка сети при удалении товара', 'danger');
+                                console.error(error);
+                            });
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>
