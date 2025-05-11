@@ -1,12 +1,24 @@
 <?php
-session_start();
+// Удаляем session_start() так как он вызывается в header.php
+// session_start();
+// Сначала подключаем config.php для доступа к $pdo
 require_once '../config.php';
+// НЕ включаем header.php здесь! Переносим его вниз
 
 // --- НАЧАЛО БЛОКА ОБРАБОТКИ КОРЗИНЫ ---
 // Определяем, это AJAX запрос или обычный, проверяя GET-параметр ajax=1
 $is_ajax_request = isset($_GET['ajax']) && $_GET['ajax'] === '1';
 
 if (isset($_GET['action']) && isset($_GET['id_to_cart'])) {
+    // Если это AJAX-запрос, НЕ включаем header.php и footer.php
+    if ($is_ajax_request) {
+        // Нам нужны сессии, но не нужен header.php
+        session_start();
+    }
+
+    // Логируем все входящие данные для отладки
+    error_log("AJAX request to product.php: " . print_r($_GET, true));
+    
     $product_id_action = filter_var($_GET['id_to_cart'], FILTER_VALIDATE_INT);
     $action = $_GET['action'];
     
@@ -99,9 +111,15 @@ if (isset($_GET['action']) && isset($_GET['id_to_cart'])) {
         $response_data['total_cart_quantity'] = array_sum($_SESSION['cart']);
     }
 
+    // Логируем данные ответа для отладки
+    error_log("AJAX response from product.php: " . print_r($response_data, true));
+
     if ($is_ajax_request) {
+        // Добавим правильные HTTP-заголовки
         header('Content-Type: application/json');
-        echo json_encode($response_data);
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        // Вывод JSON с корректной кодировкой
+        echo json_encode($response_data, JSON_UNESCAPED_UNICODE);
         exit();
     } else {
         if (!empty($response_data['message'])) {
@@ -116,6 +134,10 @@ if (isset($_GET['action']) && isset($_GET['id_to_cart'])) {
         exit();
     }
 }
+
+// Если это не AJAX-запрос или ни один из условий выше не вызвал exit(), 
+// тогда включаем header.php для обычного отображения страницы
+include_once "../template/header.php";
 
 // Отображение flash-сообщений (если есть)
 $flash_message_html = '';
@@ -228,7 +250,6 @@ if (isset($_SESSION['user_id']) && $product) {
 </head>
 
 <body>
-    <?php include_once "../template/header.php" ?>
     <?php echo $flash_message_html; // Выводим flash сообщение здесь ?>
 
 <?php if (!empty($error_message)): ?>
@@ -334,7 +355,7 @@ if (isset($_SESSION['user_id']) && $product) {
                             </div>
                         <?php else: ?>
                             <a href="#" class="btn btn-primary btn-lg cart-action-btn" data-action="add_to_cart">
-                                <i class="bi bi-cart-plus"></i> Добавить в корзину
+                    <i class="bi bi-cart-plus"></i> Добавить в корзину
                             </a>
                         <?php endif; ?>
                     <?php else: // Товара нет на складе ?>
@@ -413,7 +434,7 @@ if (isset($_SESSION['user_id']) && $product) {
                 thumb.style.borderColor = 'transparent';
             });
             if (event && event.target) {
-                event.target.classList.add('active');
+            event.target.classList.add('active');
                 event.target.style.borderColor = '#007bff'; // Bootstrap primary color, or your preferred highlight
             }
         }

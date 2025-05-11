@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const catalogueUrl = '/main/catalogue.php'; // Базовый URL для AJAX запросов из каталога
-    const productUrl = '/main/product.php';   // Базовый URL для AJAX запросов со страницы товара
+    // Определение базовых путей к обработчикам
+    const ROOT_PATH = '/main/';
 
     function updateCartControls(productId, newQuantity, stockQuantity) {
         const controlsContainer = document.querySelector(`.cart-controls[data-product-id="${productId}"]`);
@@ -13,34 +13,28 @@ document.addEventListener('DOMContentLoaded', function () {
             // If not provided, try to read from existing attribute
             stockQuantity = parseInt(controlsContainer.dataset.stock);
             if (isNaN(stockQuantity)) {
-                // Fallback if data-stock is not set or invalid, though it should be from PHP
-                // Consider fetching it or disabling actions if truly unknown.
-                // For now, let's assume it might be a very high number if not specified, 
-                // or handle it as an error/disabled state.
-                // Let's default to 0 to be safe if not set, forcing "Out of stock" if not properly initialized.
                 stockQuantity = 0; 
                 console.warn(`Stock quantity for product ${productId} is unknown, defaulting to 0.`);
             }
         }
 
-        let actionUrlBase = '';
-        // Определяем, на какой странице мы находимся, чтобы правильно сформировать URL для AJAX
-        if (window.location.pathname.includes('catalogue.php')) {
-            actionUrlBase = catalogueUrl;
-        } else if (window.location.pathname.includes('product.php')) {
-            actionUrlBase = productUrl;
+        // Определяем полный путь к обработчику
+        let actionUrlBase = ROOT_PATH;
+        // Используем текущий путь для определения страницы
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('catalogue.php')) {
+            actionUrlBase += 'catalogue.php';
+        } else if (currentPath.includes('product.php')) {
+            actionUrlBase += 'product.php';
         } else {
-            // Если мы на другой странице (например, cart.php, где тоже могут быть такие контролы в будущем)
-            // то нужно будет доработать определение actionUrlBase или передавать его
-            console.warn('Cart controls update: Unknown page, AJAX URL might be incorrect.');
-            // Попробуем угадать по наличию ID в URL для страницы продукта
-             const urlParams = new URLSearchParams(window.location.search);
-             const pageProductId = urlParams.get('id');
-             if (pageProductId && pageProductId == productId) {
-                 actionUrlBase = productUrl;
-             } else {
-                 actionUrlBase = catalogueUrl; // По умолчанию каталог
-             }
+            console.warn('Cart controls update: Unknown page, trying to determine from URL params');
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageProductId = urlParams.get('id');
+            if (pageProductId && pageProductId == productId) {
+                actionUrlBase += 'product.php';
+            } else {
+                actionUrlBase += 'catalogue.php'; // По умолчанию каталог
+            }
         }
 
         // If stock is 0 or less, show "Out of stock" and disable controls
@@ -120,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function handleCartAction(event) {
         event.preventDefault();
-        const target = event.currentTarget; // Это кнопка/ссылка, на которую кликнули
+        const target = event.currentTarget;
         const controlsContainer = target.closest('.cart-controls');
         if (!controlsContainer) return;
 
@@ -130,70 +124,72 @@ document.addEventListener('DOMContentLoaded', function () {
         let qty = null;
         const inputField = controlsContainer.querySelector('.product-quantity-input');
 
-        // Client-side stock check for add_to_cart (incrementing or initial add)
+        // Client-side stock check for add_to_cart
         if (action === 'add_to_cart') {
             let currentQtyInCart = 0;
             if (inputField) { // If quantity input exists, get its value
                 currentQtyInCart = parseInt(inputField.value) || 0;
             }
-            // For the button "В корзину" (no input yet), currentQtyInCart is 0, we attempt to add 1.
-            // For the "+" button, currentQtyInCart is the current value, we attempt to add 1 more.
             if (currentQtyInCart + 1 > currentStock) {
-                // alert('Недостаточно товара на складе! Доступно: ' + currentStock + ' шт.');
                 showProductNotification(productId, 'Доступно: ' + currentStock + ' шт. Больше нет на складе.', 'warning');
-                // Optionally, disable the button if it's the "+" button
-                if (target.innerHTML === '+') { // A bit fragile check, better to use a class or specific selector
+                if (target.innerHTML === '+') {
                     target.classList.add('disabled');
                 }
                 return; // Stop further action
             }
         }
 
-        let actionUrlBase = '';
-         // Определяем, на какой странице мы находимся
-        if (window.location.pathname.includes('catalogue.php')) {
-            actionUrlBase = catalogueUrl;
-        } else if (window.location.pathname.includes('product.php')) {
-            actionUrlBase = productUrl;
+        // Определяем полный путь к обработчику
+        let actionUrlBase = ROOT_PATH;
+        // Используем текущий путь для определения страницы
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('catalogue.php')) {
+            actionUrlBase += 'catalogue.php';
+        } else if (currentPath.includes('product.php')) {
+            actionUrlBase += 'product.php';
         } else {
-            console.warn('Cart action: Unknown page, AJAX URL might be incorrect.');
+            console.warn('Cart action: Unknown page, trying to determine from URL params');
             const urlParams = new URLSearchParams(window.location.search);
             const pageProductId = urlParams.get('id');
-            if (pageProductId && pageProductId == productId) { // Если ID товара из URL совпадает с ID товара кнопки
-                 actionUrlBase = productUrl;
-            } else { // Иначе, считаем, что это каталог (или нужно будет более сложное определение)
-                 actionUrlBase = catalogueUrl;
+            if (pageProductId && pageProductId == productId) {
+                actionUrlBase += 'product.php';
+            } else {
+                actionUrlBase += 'catalogue.php';
             }
         }
         
+        // Формируем URL для AJAX запроса
         let ajaxUrl = `${actionUrlBase}?action=${action}&id_to_cart=${productId}&ajax=1`;
 
         if (action === 'update_quantity') {
             const inputField = controlsContainer.querySelector('.product-quantity-input');
             qty = parseInt(inputField.value);
-            if (isNaN(qty) || qty < 0) { // Если ввели не число или отрицательное, считаем как 0 (удаление)
+            if (isNaN(qty) || qty < 0) {
                 qty = 0; 
             }
-             // Для update_quantity, если qty=0, PHP сам удалит товар (unset), поэтому здесь не меняем action.
             ajaxUrl += `&qty=${qty}`;
         }
 
+        // Добавляем отладочную информацию в консоль
+        console.log('Sending AJAX request to:', ajaxUrl);
 
         fetch(ajaxUrl)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Ошибка сети: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('AJAX response data:', data);
                 if (data.success) {
-                    // Pass stock_quantity from AJAX response to updateCartControls
                     updateCartControls(data.product_id, data.new_quantity, data.stock_quantity);
                     updateCartBadge(data.total_cart_quantity);
-                    // Можно добавить маленькое всплывающее уведомление (не flash) через JS, если нужно
-                    // console.log(data.message); 
                 } else {
                     console.error('Cart action error:', data.message);
-                    // alert('Ошибка: ' + data.message);
-                    showProductNotification(productId, data.message, 'danger'); // productId здесь извлекается из controlsContainer выше
+                    showProductNotification(productId, data.message, 'danger');
 
-                    // If server returns an error, and includes current stock info, update controls
                     if (typeof data.stock_quantity !== 'undefined') {
                         updateCartControls(productId, data.current_quantity_in_cart || 0, data.stock_quantity);
                     }
@@ -201,7 +197,8 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(error => {
                 console.error('Fetch error:', error);
-                alert('Произошла сетевая ошибка при обновлении корзины.');
+                // Более подробное сообщение об ошибке для отладки
+                showProductNotification(productId, 'Ошибка при обновлении корзины: ' + error.message, 'danger');
             });
     }
 
