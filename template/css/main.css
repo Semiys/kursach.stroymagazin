@@ -98,7 +98,7 @@ body {
 .product-card .price {
   font-size: 1.4rem;
   font-weight: 600;
-  color: #E64A19;
+  color: #2563eb !important;
   margin-bottom: 0.75rem;
 }
 
@@ -262,15 +262,15 @@ body {
   font-size: 1em; /* Чтобы иконка была соразмерна тексту */
 }
 
-/* Новые стили для кнопки "В корзину" */
+/* Новые стили для кнопки "В корзину" - ЗАКОММЕНТИРОВАНЫ ЧТОБЫ ВЕРНУТЬ СИНИЙ ЦВЕТ ОТ BTN-PRIMARY
 .cart-btn-new {
-  background-color: #F57C00 !important; /* Примерный оранжевый, замените на ваш */
+  background-color: #F57C00 !important; 
   border-color: #EF6C00 !important;
   color: white !important;
   font-weight: 500 !important;
   padding: 0.6rem 0.75rem !important; 
   text-transform: none !important; 
-  border-radius: 0.25rem; /* Небольшое скругление */
+  border-radius: 0.25rem; 
   transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
 }
 
@@ -278,4 +278,15 @@ body {
   background-color: #E65100 !important;
   border-color: #D84315 !important;
   color: white !important;
+}
+*/
+
+.stars-rating > i {
+    cursor: pointer;
+    font-size: 1.5rem; /* Размер звезд */
+    margin-right: 0.25rem;
+    color: #adb5bd; /* Цвет неактивной звезды по умолчанию */
+}
+.stars-rating > i.bi-star-fill.text-warning {
+    color: #ffc107 !important; /* Явный цвет для активной звезды Bootstrap */
 }

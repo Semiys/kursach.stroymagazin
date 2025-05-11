@@ -187,7 +187,7 @@ try {
                             default: echo 'Новинки'; break;
                         }
                         ?>
-                    </button>
+                </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownSortButton">
                         <li><a class="dropdown-item <?php if ($sort_by == 'newest') echo 'active'; ?>" href="<?php echo getCurrentUrlWithSort('newest'); ?>">Новинки</a></li>
                         <li><a class="dropdown-item <?php if ($sort_by == 'price_asc') echo 'active'; ?>" href="<?php echo getCurrentUrlWithSort('price_asc'); ?>">Цена: по возрастанию</a></li>
@@ -234,16 +234,16 @@ try {
             <div class="col-lg-3 filters-column">
                 <div class="filter-sidebar-wrapper">
                     <form action="catalogue.php" method="GET">
-                        <div class="filter-sidebar p-4 shadow-sm">
-                            <div class="filter-group">
-                                <h6 class="mb-3">Категории</h6>
+                <div class="filter-sidebar p-4 shadow-sm">
+                    <div class="filter-group">
+                        <h6 class="mb-3">Категории</h6>
                                 <?php if (!empty($all_filter_categories)): ?>
                                     <?php
                                     // $selected_categories_from_url уже определена выше и используется для отметки чекбоксов
                                     ?>
                                     <?php foreach ($all_filter_categories as $category_item): ?>
                                         <?php $category_id_safe = htmlspecialchars(str_replace(' ', '-', $category_item)); ?>
-                                        <div class="form-check mb-2">
+                        <div class="form-check mb-2">
                                             <input class="form-check-input"
                                                    type="checkbox"
                                                    name="categories[]"
@@ -253,16 +253,16 @@ try {
                                                    >
                                             <label class="form-check-label" for="category-<?php echo $category_id_safe; ?>">
                                                 <?php echo htmlspecialchars($category_item); ?>
-                                            </label>
-                                        </div>
+                            </label>
+                        </div>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <p class="text-muted small">Категории не найдены.</p>
                                 <?php endif; ?>
-                            </div>
+                    </div>
 
-                            <div class="filter-group">
-                                <h6 class="mb-3">Диапазон цены</h6>
+                    <div class="filter-group">
+                        <h6 class="mb-3">Диапазон цены</h6>
                                 <div class="row g-2">
                                     <div class="col">
                                         <input type="number" class="form-control" name="price_min" placeholder="От" value="<?php echo htmlspecialchars($price_min); ?>" min="0" step="any">
@@ -270,40 +270,40 @@ try {
                                     <div class="col">
                                         <input type="number" class="form-control" name="price_max" placeholder="До" value="<?php echo htmlspecialchars($price_max); ?>" min="0" step="any">
                                     </div>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
 
-                            <!-- <div class="filter-group">
-                                <h6 class="mb-3">Цвета</h6>
-                                <div class="d-flex gap-2">
-                                    <div class="color-option selected" style="background: #000000;"></div>
-                                    <div class="color-option" style="background: #dc2626;"></div>
-                                    <div class="color-option" style="background: #2563eb;"></div>
-                                    <div class="color-option" style="background: #16a34a;"></div>
-                                </div>
-                            </div> -->
+                    <!-- <div class="filter-group">
+                        <h6 class="mb-3">Цвета</h6>
+                        <div class="d-flex gap-2">
+                            <div class="color-option selected" style="background: #000000;"></div>
+                            <div class="color-option" style="background: #dc2626;"></div>
+                            <div class="color-option" style="background: #2563eb;"></div>
+                            <div class="color-option" style="background: #16a34a;"></div>
+                        </div>
+                    </div> -->
 
-                            <div class="filter-group">
-                                <h6 class="mb-3">Рейтинг</h6>
-                                <div class="form-check mb-2">
+                    <div class="filter-group">
+                        <h6 class="mb-3">Рейтинг</h6>
+                        <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="rating_filter" id="rating4" value="4" <?php if ($rating_filter == 4) echo 'checked'; ?>>
-                                    <label class="form-check-label" for="rating4">
-                                        <i class="bi bi-star-fill text-warning"></i> 4 и выше
-                                    </label>
-                                </div>
-                                <div class="form-check mb-2">
+                            <label class="form-check-label" for="rating4">
+                                <i class="bi bi-star-fill text-warning"></i> 4 и выше
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="rating_filter" id="rating3" value="3" <?php if ($rating_filter == 3) echo 'checked'; ?>>
-                                    <label class="form-check-label" for="rating3">
-                                        <i class="bi bi-star-fill text-warning"></i> 3 и выше
-                                    </label>
-                                </div>
+                            <label class="form-check-label" for="rating3">
+                                <i class="bi bi-star-fill text-warning"></i> 3 и выше
+                            </label>
+                        </div>
                                  <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="rating_filter" id="rating_any" value="" <?php if ($rating_filter === null) echo 'checked'; ?>>
                                     <label class="form-check-label" for="rating_any">
                                         Любой рейтинг
                                     </label>
-                                </div>
-                            </div>
+                    </div>
+                </div>
                             <!-- Кнопка и скрытые поля перемещены сюда, ВНУТРЬ блока .filter-sidebar.p-4.shadow-sm -->
                             <button type="submit" class="btn btn-primary w-100 mt-3">Применить фильтры</button>
                             <?php
@@ -325,7 +325,7 @@ try {
                 <div class="row g-4">
                     <?php if (!empty($products)): ?>
                         <?php foreach ($products as $product): ?>
-                            <div class="col-md-4">
+                    <div class="col-md-4">
                                 <div class="product-card shadow-sm h-100">
                                     <div class="position-relative product-image-container">
                                         <?php
@@ -346,7 +346,7 @@ try {
                                         <a href="product.php?id=<?php echo $product['id']; ?>">
                                             <img src="<?php echo $imagePath; ?>" class="product-image w-100" alt="<?php echo htmlspecialchars($product['title']); ?>">
                                         </a>
-                                    </div>
+                                </div>
                                     <div class="card-body-custom d-flex flex-column">
                                         <div>
                                             <p class="product-code text-muted small mb-1">Код: <?php echo htmlspecialchars($product['article'] ?? 'N/A'); ?></p>
@@ -356,7 +356,7 @@ try {
                                                     <?php echo htmlspecialchars($product['title']); ?>
                                                 </a>
                                             </h6>
-                                            <div class="rating-stars mb-2">
+                                <div class="rating-stars mb-2">
                                                 <?php 
                                                 $rating_value = isset($product['rating']) ? (float)$product['rating'] : 0;
                                                 $full_stars = floor($rating_value);
@@ -375,18 +375,18 @@ try {
                                                     <i class="bi bi-star text-warning"></i>
                                                 <?php endfor; ?>
                                                 <span class="text-muted ms-1">(<?php echo number_format($rating_value, 1); ?>)</span>
-                                            </div>
+                                </div>
                                             <p class="product-availability mb-2">
                                                 <i class="bi bi-check-circle-fill text-success"></i> В наличии
                                             </p>
-                                        </div>
+                                </div>
                                         <div class="mt-auto">
-                                            <p class="price fw-bold fs-5 mb-2"><?php echo number_format($product['price'], 0, '.', ' '); ?> ₽/шт</p>
-                                            <a href="cart.php?action=add&id=<?php echo $product['id']; ?>" class="btn btn-primary w-100 cart-btn-new" title="Добавить в корзину">
+                                            <p class="price fw-bold fs-5 mb-2" style="color: #2563eb !important;"><?php echo number_format($product['price'], 0, '.', ' '); ?> ₽/шт</p>
+                                            <a href="cart.php?action=add&id=<?php echo $product['id']; ?>" class="btn btn-primary w-100" title="Добавить в корзину">
                                                 В корзину
                                             </a>
-                                        </div>
-                                    </div>
+                        </div>
+                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>

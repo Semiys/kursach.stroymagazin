@@ -10,7 +10,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $product_id = (int)$_GET['id'];
 
     try {
-        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count FROM goods WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images FROM goods WHERE id = ?");
         $stmt->execute([$product_id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -27,15 +27,50 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $error_message = 'ID товара не указан или некорректен.';
 }
 
-// Логику для галереи изображений (если есть дополнительные) можно будет добавить здесь
-// Например, если в $product['gallery_images'] есть строка с именами файлов через запятую:
-// $gallery_images = [];
-// if ($product && !empty($product['gallery_images'])) {
-//    $gallery_image_names = explode(',', $product['gallery_images']);
-//    foreach ($gallery_image_names as $img_name) {
-//        $gallery_images[] = '../template/assets/' . htmlspecialchars(trim($img_name));
-//    }
-// }
+// Готовим массив путей к изображениям галереи
+$gallery_image_paths = [];
+if ($product && !empty($product['gallery_images'])) {
+    $gallery_image_names = explode(',', $product['gallery_images']);
+    foreach ($gallery_image_names as $img_name) {
+        $trimmed_name = trim($img_name);
+        if (!empty($trimmed_name)) { // Убедимся, что имя файла не пустое
+            $potential_path = '../template/assets/' . htmlspecialchars($trimmed_name);
+            $absolute_potential_path = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($trimmed_name));
+            if (file_exists($absolute_potential_path)) {
+                $gallery_image_paths[] = $potential_path;
+            }
+        }
+    }
+}
+// Добавляем основное изображение в начало галереи, если оно есть и еще не там
+if ($product && !empty($product['img'])) {
+    $main_image_path_for_gallery = '../template/assets/' . htmlspecialchars($product['img']);
+    $absolute_main_image_path = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img']));
+    if (file_exists($absolute_main_image_path) && !in_array($main_image_path_for_gallery, $gallery_image_paths)) {
+        array_unshift($gallery_image_paths, $main_image_path_for_gallery);
+    } elseif (empty($gallery_image_paths) && file_exists($absolute_main_image_path)){
+        // Если галерея пуста, но основное изображение есть, добавляем его
+        $gallery_image_paths[] = $main_image_path_for_gallery;
+    }
+}
+
+// Узнаем, оценил ли текущий пользователь этот товар
+$user_rating_for_this_product = 0;
+$user_has_rated = false;
+if (isset($_SESSION['user_id']) && $product) {
+    try {
+        $stmt_user_rating = $pdo->prepare("SELECT rating_value FROM product_ratings WHERE user_id = ? AND product_id = ?");
+        $stmt_user_rating->execute([$_SESSION['user_id'], $product['id']]);
+        $rating_row = $stmt_user_rating->fetch(PDO::FETCH_ASSOC);
+        if ($rating_row) {
+            $user_rating_for_this_product = (int)$rating_row['rating_value'];
+            $user_has_rated = true;
+        }
+    } catch (PDOException $e) {
+        error_log("Ошибка получения оценки пользователя: " . $e->getMessage());
+        // Не прерываем выполнение, просто пользователь не увидит свою предыдущую оценку сразу
+    }
+}
 
 // Логика для характеристик из поля discr
 // $characteristics = [];
@@ -99,18 +134,19 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 }
                 ?>
                 <img src="<?php echo $mainImagePath; ?>" alt="<?php echo htmlspecialchars($product['title'] ?? 'Изображение товара'); ?>" class="img-fluid rounded mb-3" id="mainImage">
-                <?php /* Блок с миниатюрами пока закомментируем 
-                <div class="d-flex justify-content-between">
-                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NzEyNjZ8MHwxfHNlYXJjaHwxfHxoZWFkcGhvbmV8ZW58MHwwfHx8MTcyMTMwMzY5MHww&ixlib=rb-4.0.3&q=80&w=1080"
-                        alt="Thumbnail 1" class="thumbnail rounded active" onclick="changeImage(event, this.src)">
-                    <img src="https://images.unsplash.com/photo-1528148343865-51218c4a13e6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NzEyNjZ8MHwxfHNlYXJjaHwzfHxoZWFkcGhvbmV8ZW58MHwwfHx8MTcyMTMwMzY5MHww&ixlib=rb-4.0.3&q=80&w=1080"
-                        alt="Thumbnail 2" class="thumbnail rounded" onclick="changeImage(event, this.src)">
-                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NzEyNjZ8MHwxfHNlYXJjaHwxfHxoZWFkcGhvbmV8ZW58MHwwfHx8MTcyMTMwMzY5MHww&ixlib=rb-4.0.3&q=80&w=1080"
-                        alt="Thumbnail 3" class="thumbnail rounded" onclick="changeImage(event, this.src)">
-                    <img src="https://images.unsplash.com/photo-1528148343865-51218c4a13e6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w0NzEyNjZ8MHwxfHNlYXJjaHwzfHxoZWFkcGhvbmV8ZW58MHwwfHx8MTcyMTMwMzY5MHww&ixlib=rb-4.0.3&q=80&w=1080"
-                        alt="Thumbnail 4" class="thumbnail rounded" onclick="changeImage(event, this.src)">
+                <?php if (!empty($gallery_image_paths) && count($gallery_image_paths) > 1): ?>
+                <div class="row gx-2 gy-2 mt-2 thumbnail-gallery">
+                    <?php foreach ($gallery_image_paths as $index => $thumb_path): ?>
+                    <div class="col-3">
+                        <img src="<?php echo $thumb_path; ?>"
+                             alt="Thumbnail <?php echo $index + 1; ?>"
+                             class="img-fluid rounded thumbnail <?php if ($thumb_path === $mainImagePath) echo 'active'; ?>"
+                             onclick="changeImage(event, this.src)"
+                             style="cursor: pointer; border: 2px solid transparent;">
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-                */ ?>
+                <?php endif; ?>
             </div>
 
             <!-- Product Details -->
@@ -147,13 +183,23 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                 <button class="btn btn-primary btn-lg mb-3 me-2">
                     <i class="bi bi-cart-plus"></i> Добавить в корзину
                 </button>
-                <button class="btn btn-outline-secondary btn-lg mb-3">
-                    <i class="bi bi-heart"></i> Оценить товар
-                </button>
+                <div class="mb-3 rating-widget-container">
+                    <h6>Оцените товар:</h6>
+                    <div class="stars-rating mb-2 <?php if ($user_has_rated) echo 'rated'; ?>" 
+                         data-product-id="<?php echo $product['id']; ?>" 
+                         data-initial-rating="<?php echo $user_rating_for_this_product; ?>">
+                        <i class="bi bi-star" data-value="1" title="Плохо"></i>
+                        <i class="bi bi-star" data-value="2" title="Сойдет"></i>
+                        <i class="bi bi-star" data-value="3" title="Хорошо"></i>
+                        <i class="bi bi-star" data-value="4" title="Отлично"></i>
+                        <i class="bi bi-star" data-value="5" title="Превосходно!"></i>
+                    </div>
+                    <small id="rating-message" class="form-text text-muted"></small>
+                </div>
                 <div class="mt-4">
                     <div class="d-flex align-items-center mb-2">
                         <i class="fas fa-truck text-primary me-2"></i>
-                        <span>Беслплатная доставка от 5000 рублей</span>
+                        <span>Бесплатная доставка от 5000 рублей</span>
                     </div>
                     <div class="d-flex align-items-center mb-2">
                         <i class="fas fa-undo text-primary me-2"></i>
@@ -193,7 +239,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
                                 <li><p><?php echo htmlspecialchars($value); ?></p></li>
                             <?php endif; ?>
                         <?php endforeach; ?>
-                    </ul>
+                </ul>
                 <?php else: ?>
                     <p>Характеристики не указаны.</p>
                 <?php endif; ?>
@@ -204,9 +250,135 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     <script>
         function changeImage(event, src) {
             document.getElementById('mainImage').src = src;
-            document.querySelectorAll('.thumbnail').forEach(thumb => thumb.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.thumbnail-gallery .thumbnail').forEach(thumb => {
+                thumb.classList.remove('active');
+                thumb.style.borderColor = 'transparent';
+            });
+            if (event && event.target) {
+                event.target.classList.add('active');
+                event.target.style.borderColor = '#007bff'; // Bootstrap primary color, or your preferred highlight
+            }
         }
+        // Set initial active thumbnail border
+        document.addEventListener('DOMContentLoaded', function() {
+            const activeThumb = document.querySelector('.thumbnail-gallery .thumbnail.active');
+            if (activeThumb) {
+                activeThumb.style.borderColor = '#007bff';
+            }
+
+            const starsContainer = document.querySelector('.stars-rating');
+            if (starsContainer) {
+                const stars = starsContainer.querySelectorAll('.bi-star, .bi-star-fill');
+                const productId = starsContainer.dataset.productId;
+                const ratingMessage = document.getElementById('rating-message');
+                // Считываем начальный рейтинг из data-атрибута
+                let initialRating = parseInt(starsContainer.dataset.initialRating) || 0;
+                // Если виджет уже помечен как 'rated', то currentRating равен initialRating
+                if (starsContainer.classList.contains('rated')) {
+                    starsContainer.dataset.currentRating = initialRating;
+                }
+
+                function highlightStars(rating) {
+                    stars.forEach(star => {
+                        if (parseInt(star.dataset.value) <= rating) {
+                            star.classList.remove('bi-star');
+                            star.classList.add('bi-star-fill', 'text-warning');
+                        } else {
+                            star.classList.remove('bi-star-fill', 'text-warning');
+                            star.classList.add('bi-star');
+                        }
+                    });
+                }
+
+                stars.forEach(star => {
+                    star.addEventListener('mouseover', function() {
+                        if (!starsContainer.classList.contains('rated')) {
+                            highlightStars(parseInt(this.dataset.value));
+                        }
+                    });
+
+                    star.addEventListener('mouseout', function() {
+                        if (!starsContainer.classList.contains('rated')) {
+                            // Возвращаем к 0, если не было клика, или к initialRating, если он был установлен
+                            const currentRating = parseInt(starsContainer.dataset.currentRating) || 0; // Это будет 0, если еще не кликнуто
+                            highlightStars(currentRating);
+                        }
+                    });
+
+                    star.addEventListener('click', function() {
+                        if (starsContainer.classList.contains('rated')) {
+                            ratingMessage.textContent = 'Вы уже оценили этот товар.';
+                            ratingMessage.className = 'form-text text-info'; // Можно использовать text-info или text-muted
+                            return;
+                        }
+                        const ratingValue = parseInt(this.dataset.value);
+                        starsContainer.dataset.currentRating = ratingValue;
+                        starsContainer.classList.add('rated');
+                        highlightStars(ratingValue);
+
+                        fetch('rate_product.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `product_id=${productId}&rating=${ratingValue}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                ratingMessage.textContent = data.message || 'Спасибо за вашу оценку!';
+                                ratingMessage.className = 'form-text text-success';
+                                if (data.new_average_rating !== undefined && data.new_rating_count !== undefined) {
+                                    const averageRatingElement = document.querySelector('.product-details-rating .rating-value');
+                                    const ratingCountElement = document.querySelector('.product-details-rating .rating-count');
+
+                                    if (averageRatingElement) {
+                                        averageRatingElement.textContent = parseFloat(data.new_average_rating).toFixed(1);
+                                    }
+                                    if (ratingCountElement) {
+                                        ratingCountElement.textContent = `(${data.new_rating_count} оценок)`;
+                                    }
+                                    // Обновляем существующие звезды отображения рейтинга
+                                    const displayedStarsContainer = document.querySelector('.product-details-rating .stars-display');
+                                    if(displayedStarsContainer){
+                                        const newRatingFloat = parseFloat(data.new_average_rating);
+                                        const fullStars = Math.floor(newRatingFloat);
+                                        const halfStar = (newRatingFloat - fullStars) >= 0.5 ? 1 : 0;
+                                        const emptyStars = 5 - fullStars - halfStar;
+                                        let starsHTML = '';
+                                        for(let i=0; i < fullStars; i++) starsHTML += '<i class="bi bi-star-fill text-warning"></i>';
+                                        if(halfStar) starsHTML += '<i class="bi bi-star-half text-warning"></i>';
+                                        for(let i=0; i < emptyStars; i++) starsHTML += '<i class="bi bi-star text-warning"></i>';
+                                        displayedStarsContainer.innerHTML = starsHTML;
+                                    }
+                                }
+                            } else {
+                                ratingMessage.textContent = data.message || 'Ошибка при сохранении оценки.';
+                                ratingMessage.className = 'form-text text-danger';
+                                starsContainer.classList.remove('rated');
+                                starsContainer.dataset.currentRating = 0;
+                                highlightStars(0);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            ratingMessage.textContent = 'Произошла сетевая ошибка.';
+                            ratingMessage.className = 'form-text text-danger';
+                            starsContainer.classList.remove('rated');
+                            starsContainer.dataset.currentRating = 0;
+                            highlightStars(0);
+                        });
+                    });
+                });
+
+                // Устанавливаем начальное состояние звезд на основе initialRating
+                highlightStars(initialRating);
+                if (initialRating > 0 && starsContainer.classList.contains('rated')){
+                    ratingMessage.textContent = 'Вы уже оценили этот товар.';
+                    ratingMessage.className = 'form-text text-info'; // Можно использовать text-info или text-muted
+                }
+            }
+        });
     </script>
 
     <?php include_once "../template/footer.php" ?>
