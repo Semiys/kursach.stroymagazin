@@ -168,7 +168,7 @@ if ($current_page < 1) {
 $offset = ($current_page - 1) * $products_per_page;
 
 // Формируем SQL-запрос для товаров
-$sql_products = "SELECT id, title, price, img, category, discr, rating, article, stock_quantity FROM goods";
+$sql_products = "SELECT id, title, price, img, category, discr, rating, article, stock_quantity, discount FROM goods";
 $params_products = []; // Массив для параметров подготовленного выражения
 $where_clauses = []; // Массив для условий WHERE
 
@@ -491,6 +491,15 @@ try {
                                         <a href="product.php?id=<?php echo $product['id']; ?>">
                                             <img src="<?php echo $imagePath; ?>" class="product-image w-100" alt="<?php echo htmlspecialchars($product['title']); ?>">
                                         </a>
+                                        <?php 
+                                        // Добавляем бейджи скидки и хитов на изображение товара
+                                        $discount = isset($product['discount']) ? intval($product['discount']) : 0;
+                                        ?>
+                                        <div class="position-absolute top-0 start-0" style="padding-left: 6px; padding-top: 2px;">
+                                            <?php if ($discount > 0): ?>
+                                                <span class="badge text-bg-danger discount-badge">СКИДКА <?php echo $discount; ?>%</span>
+                                            <?php endif; ?>
+                                        </div>
                                 </div>
                                     <div class="card-body-custom d-flex flex-column">
                                         <div>
@@ -530,7 +539,27 @@ try {
                                             </p>
                                 </div>
                                         <div class="mt-auto">
-                                            <p class="price fw-bold fs-5 mb-2" style="color: #2563eb !important;"><?php echo number_format($product['price'], 0, '.', ' '); ?> ₽/шт</p>
+                                            <?php 
+                                            // Используем уже объявленную переменную $discount, не пересоздаем ее
+                                            // $discount уже объявлена в строке 492
+                                            $original_price = floatval($product['price']);
+                                            $discounted_price = $original_price;
+
+                                            if ($discount > 0) {
+                                                $discounted_price = $original_price * (1 - $discount / 100);
+                                            }
+                                            ?>
+
+                                            <!-- Отображение цены с учетом скидки -->
+                                            <span class="price">
+                                                <?php if ($discount > 0): ?>
+                                                <del class="text-muted me-2"><?php echo number_format($original_price, 2); ?>₽</del>
+                                                <?php echo number_format($discounted_price, 2); ?>₽
+                                                <?php else: ?>
+                                                <?php echo number_format($original_price, 2); ?>₽
+                                                <?php endif; ?>
+                                                <a style="color: gray;">шт.</a>
+                                            </span>
                                             <?php 
                                                 $product_id_for_template = $product['id'];
                                                 $product_stock_quantity = isset($product['stock_quantity']) ? (int)$product['stock_quantity'] : 0;

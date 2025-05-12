@@ -160,7 +160,7 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $product_id = (int)$_GET['id'];
 
     try {
-        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images, stock_quantity FROM goods WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images, stock_quantity, discount FROM goods WHERE id = ?");
         $stmt->execute([$product_id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -234,6 +234,15 @@ if (isset($_SESSION['user_id']) && $product) {
 //    }
 // }
 
+// Рассчитываем скидку
+$discount = isset($product['discount']) ? intval($product['discount']) : 0;
+$original_price = floatval($product['price']);
+$discounted_price = $original_price;
+
+if ($discount > 0) {
+    $discounted_price = $original_price * (1 - $discount / 100);
+}
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -304,12 +313,18 @@ if (isset($_SESSION['user_id']) && $product) {
                 <h2 class="mb-3"><?php echo htmlspecialchars($product['title'] ?? 'Название товара'); ?></h2>
                 <p class="text-muted mb-4">Артикул: <?php echo htmlspecialchars($product['article'] ?? 'N/A'); ?></p>
                 <div class="mb-3">
-                    <span class="h4 me-2"><?php 
-                        $price_val = $product['price'] ?? 0;
-                        $decimals = ($price_val == floor($price_val)) ? 0 : 2; // 0 знаков если целое, иначе 2
-                        echo number_format($price_val, $decimals, '.', ' '); 
-                    ?>₽</span>
-                    <?php // <span class="text-muted"><s>499.99₽</s></span> // Старую цену пока убрали ?>
+                    <?php if ($discount > 0): ?>
+                    <span class="badge text-bg-danger mb-2">СКИДКА <?php echo $discount; ?>%</span>
+                    <?php endif; ?>
+                </div>
+                <div class="mb-3">
+                    <?php if ($discount > 0): ?>
+                    <del class="text-muted me-2 fs-5"><?php echo number_format($original_price, 2); ?>₽</del>
+                    <span class="price fs-3 fw-bold"><?php echo number_format($discounted_price, 2); ?>₽</span>
+                    <?php else: ?>
+                    <span class="price fs-3 fw-bold"><?php echo number_format($original_price, 2); ?>₽</span>
+                    <?php endif; ?>
+                    <span class="text-muted">за шт.</span>
                 </div>
                 <div class="mb-3">
                     <?php

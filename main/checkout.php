@@ -33,7 +33,7 @@ $product_ids = array_keys($_SESSION['cart']);
 
 if (!empty($product_ids)) {
     $placeholders = implode(',', array_fill(0, count($product_ids), '?'));
-    $sql = "SELECT id, title, price, img, category, stock_quantity FROM goods WHERE id IN ($placeholders)";
+    $sql = "SELECT id, title, price, img, category, stock_quantity, discount FROM goods WHERE id IN ($placeholders)";
     
     try {
         $stmt = $pdo->prepare($sql);
@@ -43,13 +43,24 @@ if (!empty($product_ids)) {
         foreach ($products_from_db as $product) {
             $quantity_in_cart = isset($_SESSION['cart'][$product['id']]) ? (int)$_SESSION['cart'][$product['id']] : 0;
             if ($quantity_in_cart > 0) {
-                $item_total_price = $product['price'] * $quantity_in_cart;
+                // Учитываем скидку
+                $discount = isset($product['discount']) ? intval($product['discount']) : 0;
+                $original_price = floatval($product['price']);
+                $discounted_price = $original_price;
+                
+                if ($discount > 0) {
+                    $discounted_price = $original_price * (1 - $discount / 100);
+                }
+                
+                $item_total_price = $discounted_price * $quantity_in_cart;
                 $total_cart_value += $item_total_price;
                 
                 $cart_products[] = [
                     'id' => $product['id'],
                     'title' => $product['title'],
-                    'price' => $product['price'],
+                    'price' => $original_price,
+                    'discount' => $discount,
+                    'discounted_price' => $discounted_price,
                     'img' => $product['img'],
                     'category' => $product['category'],
                     'stock_quantity' => (int)$product['stock_quantity'],

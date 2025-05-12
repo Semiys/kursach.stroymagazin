@@ -93,7 +93,7 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION[
     if (!empty($product_ids_sanitized)) {
         // Создаем плейсхолдеры для подготовленного запроса
         $placeholders = implode(',', array_fill(0, count($product_ids_sanitized), '?'));
-        $sql = "SELECT id, title, price, img, category, stock_quantity FROM goods WHERE id IN ($placeholders)";
+        $sql = "SELECT id, title, price, img, category, stock_quantity, discount FROM goods WHERE id IN ($placeholders)";
         
         try {
             // Используем $pdo вместо $conn
@@ -109,13 +109,24 @@ if (isset($_SESSION['cart']) && is_array($_SESSION['cart']) && !empty($_SESSION[
             foreach ($products_from_db as $product) {
                 $quantity_in_cart = isset($_SESSION['cart'][$product['id']]) ? (int)$_SESSION['cart'][$product['id']] : 0;
                 if ($quantity_in_cart > 0) { // Добавляем только если количество > 0
-                    $item_total_price = $product['price'] * $quantity_in_cart;
+                    // Учитываем скидку
+                    $discount = isset($product['discount']) ? intval($product['discount']) : 0;
+                    $original_price = floatval($product['price']);
+                    $discounted_price = $original_price;
+                    
+                    if ($discount > 0) {
+                        $discounted_price = $original_price * (1 - $discount / 100);
+                    }
+                    
+                    $item_total_price = $discounted_price * $quantity_in_cart;
                     $total_cart_value += $item_total_price;
                     
                     $cart_products[] = [
                         'id' => $product['id'],
                         'title' => $product['title'],
-                        'price' => $product['price'],
+                        'price' => $original_price,
+                        'discount' => $discount,
+                        'discounted_price' => $discounted_price,
                         'img' => $product['img'],
                         'category' => $product['category'],
                         'stock_quantity' => (int)$product['stock_quantity'],
@@ -230,7 +241,15 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                 </div>
                             </div>
                                     <div class="col-md-2 col-sm-4 mt-2 mt-md-0 text-end">
-                                        <p class="fw-bold mb-1 price-per-item-<?php echo $item['id']; ?>"><?php echo number_format($item['price'], 0, '.', ' '); ?>₽/шт</p>
+                                        <div class="price-block">
+                                            <?php if ($item['discount'] > 0): ?>
+                                            <del class="text-muted" style="font-size: 0.9rem;"><?php echo number_format($item['price'], 2); ?>₽</del>
+                                            <br>
+                                            <strong><?php echo number_format($item['discounted_price'], 2); ?>₽</strong> <span class="badge text-bg-danger">-<?php echo $item['discount']; ?>%</span>
+                                            <?php else: ?>
+                                            <strong><?php echo number_format($item['price'], 2); ?>₽</strong>
+                                            <?php endif; ?>
+                                        </div>
                                         <p class="fw-bold item-total-price-<?php echo $item['id']; ?>"><?php echo number_format($item['item_total_price'], 0, '.', ' '); ?>₽</p>
                                     </div>
                                     <div class="col-md-1 col-sm-2 mt-2 mt-md-0 text-end">

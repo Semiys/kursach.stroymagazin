@@ -40,8 +40,31 @@
     </button>
 </div>
 
+<?php
+// Подключение к базе данных
+require_once 'config.php';
 
-
+// Запрос для получения 4 самых популярных товаров 
+// (товары с наибольшим количеством оценок)
+try {
+    $popular_products_sql = "
+        SELECT g.*, COUNT(pr.id) as rating_count
+        FROM goods g
+        JOIN product_ratings pr ON g.id = pr.product_id
+        WHERE g.stock_quantity > 0  -- Только товары в наличии
+        GROUP BY g.id
+        ORDER BY rating_count DESC
+        LIMIT 4
+    ";
+    
+    $stmt = $pdo->prepare($popular_products_sql);
+    $stmt->execute();
+    $popular_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Ошибка при загрузке популярных товаров: " . $e->getMessage());
+    $popular_products = [];
+}
+?>
 
 <div class="d-flex justify-content-center" style="margin-top: 50px;">
     <h1>Популярные товары</h1>
@@ -49,142 +72,120 @@
 
 <div class="container" style="margin-top: 50px;">
     <div class="row">
-        <!-- Product Card 3 -->
-        <div class="col-md-3">
-            <div class="product-card shadow-sm">
-                <div class="position-relative">
-                    <img src="../template/assets/500x500.png" class="product-image w-100" alt="Product">
-                    <div class="position-absolute top-0 start-0" style="padding-left: 6px; padding-top: 2px;">
-                        <span class="badge text-bg-danger discount-badge">СКИДКА 50%</span>
-                        <span class="badge text-bg-success discount-badge">ХИТ</span>
-                    </div>
-                    <!-- <button class="wishlist-btn">
-                                    <i class="bi bi-heart"></i>
-                                </button> -->
-                </div>
-                <div class="p-3">
-                    <span class="category-badge mb-2 d-inline-block">Accessories</span>
-                    <h6 class="mb-1">Leather Wallet</h6>
-                    <div class="rating-stars mb-2">
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <span class="text-muted ms-2">(5.0)</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="price">59.99₽ <a style="color: gray;">шт.</a></span>
-                        <button class="btn cart-btn">
-                            <i class="bi bi-cart-plus"></i>
-                        </button>
-                    </div>
-                </div>
+        <?php if (empty($popular_products)): ?>
+            <div class="col-12 text-center">
+                <p>Нет популярных товаров для отображения.</p>
             </div>
-        </div>
-                    <!-- Product Card 3 -->
-                    <div class="col-md-3">
-                        <div class="product-card shadow-sm">
-                            <div class="position-relative">
-                                <img src="../template/assets/500x500.png" class="product-image w-100" alt="Product">
-                                <div class="position-absolute top-0 start-0"
-                                    style="padding-left: 6px; padding-top: 2px;">
-                                    <span class="badge text-bg-danger discount-badge">СКИДКА 50%</span>
-                                    <span class="badge text-bg-success discount-badge">ХИТ</span>
-                                </div>
-                                <!-- <button class="wishlist-btn">
-                                    <i class="bi bi-heart"></i>
-                                </button> -->
+        <?php else: ?>
+            <?php foreach ($popular_products as $product): ?>
+                <?php
+                // Получаем скидку из базы данных
+                $discount_percentage = isset($product['discount']) ? intval($product['discount']) : 0;
+                
+                $original_price = floatval($product['price']);
+                $discounted_price = $original_price;
+                
+                if ($discount_percentage > 0) {
+                    $discounted_price = $original_price * (1 - $discount_percentage / 100);
+                }
+                
+                // Определяем, является ли товар хитом (если количество оценок больше 3)
+                $is_hit = isset($product['rating_count']) && intval($product['rating_count']) > 3;
+                
+                // Проверяем, есть ли товар в корзине
+                $quantity_in_cart = 0;
+                if (isset($_SESSION['cart']) && isset($_SESSION['cart'][$product['id']])) {
+                    $quantity_in_cart = (int)$_SESSION['cart'][$product['id']];
+                }
+                ?>
+                <div class="col-md-3">
+                    <div class="product-card shadow-sm">
+                        <div class="position-relative">
+                            <?php
+                            // Определяем путь к изображению товара
+                            $imagePath = 'template/assets/500x500.png'; // Картинка по умолчанию
+                            
+                            if (!empty($product['img'])) {
+                                $potentialImagePath = 'template/assets/' . htmlspecialchars($product['img']);
+                                $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img']));
+                                
+                                if (file_exists($absolutePotentialImagePath)) {
+                                    $imagePath = $potentialImagePath;
+                                }
+                            }
+                            ?>
+                            <a href="/main/product.php?id=<?php echo $product['id']; ?>">
+                                <img src="<?php echo $imagePath; ?>" class="product-image w-100" alt="<?php echo htmlspecialchars($product['title']); ?>">
+                            </a>
+                            <div class="position-absolute top-0 start-0" style="padding-left: 6px; padding-top: 2px;">
+                                <?php if ($discount_percentage > 0): ?>
+                                <span class="badge text-bg-danger discount-badge">СКИДКА <?php echo $discount_percentage; ?>%</span>
+                                <?php endif; ?>
+                                <?php if ($is_hit): ?>
+                                <span class="badge text-bg-success discount-badge">ХИТ</span>
+                                <?php endif; ?>
                             </div>
-                            <div class="p-3">
-                                <span class="category-badge mb-2 d-inline-block">Accessories</span>
-                                <h6 class="mb-1">Leather Wallet</h6>
-                                <div class="rating-stars mb-2">
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <span class="text-muted ms-2">(5.0)</span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="price">59.99₽ <a style="color: gray;">шт.</a></span>
-                                    <button class="btn cart-btn">
+                        </div>
+                        <div class="p-3">
+                            <span class="category-badge mb-2 d-inline-block"><?php echo htmlspecialchars($product['category']); ?></span>
+                            <h6 class="mb-1"><?php echo htmlspecialchars($product['title']); ?></h6>
+                            <div class="rating-stars mb-2">
+                                <?php 
+                                // Отображение звезд рейтинга
+                                $rating_rounded = round($product['rating'], 0);
+                                for ($i = 1; $i <= 5; $i++) {
+                                    if ($i <= $rating_rounded) {
+                                        echo '<i class="bi bi-star-fill"></i>';
+                                    } else {
+                                        echo '<i class="bi bi-star"></i>';
+                                    }
+                                }
+                                ?>
+                                <span class="text-muted ms-2">(<?php echo number_format($product['rating'], 1); ?>)</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="price">
+                                    <?php if ($discount_percentage > 0): ?>
+                                    <del class="text-muted me-2"><?php echo number_format($original_price, 2); ?>₽</del>
+                                    <?php echo number_format($discounted_price, 2); ?>₽
+                                    <?php else: ?>
+                                    <?php echo number_format($original_price, 2); ?>₽
+                                    <?php endif; ?>
+                                    <a style="color: gray;">шт.</a>
+                                </span>
+                                
+                                <!-- Кнопки корзины: показываем разные UI в зависимости от наличия товара в корзине -->
+                                <div class="quantity-controls" id="cart-controls-<?php echo $product['id']; ?>">
+                                    <?php if ($quantity_in_cart > 0): ?>
+                                    <!-- Если товар уже в корзине, показываем управление количеством -->
+                                    <div class="quantity-control-group">
+                                        <button class="btn btn-sm btn-outline-primary decrease-quantity-btn" data-product-id="<?php echo $product['id']; ?>">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <span class="quantity-display"><?php echo $quantity_in_cart; ?></span>
+                                        <button class="btn btn-sm btn-outline-primary increase-quantity-btn" data-product-id="<?php echo $product['id']; ?>">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                    <?php else: ?>
+                                    <!-- Если товара нет в корзине, показываем соответствующую кнопку -->
+                                    <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>
+                                    <button class="btn cart-btn add-to-cart-btn" data-product-id="<?php echo $product['id']; ?>">
                                         <i class="bi bi-cart-plus"></i>
                                     </button>
+                                    <?php else: ?>
+                                    <button class="btn btn-secondary" disabled title="Нет в наличии">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
-                                        <!-- Product Card 3 -->
-                                        <div class="col-md-3">
-                        <div class="product-card shadow-sm">
-                            <div class="position-relative">
-                                <img src="../template/assets/500x500.png" class="product-image w-100" alt="Product">
-                                <div class="position-absolute top-0 start-0"
-                                    style="padding-left: 6px; padding-top: 2px;">
-                                    <span class="badge text-bg-danger discount-badge">СКИДКА 50%</span>
-                                    <span class="badge text-bg-success discount-badge">ХИТ</span>
-                                </div>
-                                <!-- <button class="wishlist-btn">
-                                    <i class="bi bi-heart"></i>
-                                </button> -->
-                            </div>
-                            <div class="p-3">
-                                <span class="category-badge mb-2 d-inline-block">Accessories</span>
-                                <h6 class="mb-1">Leather Wallet</h6>
-                                <div class="rating-stars mb-2">
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <span class="text-muted ms-2">(5.0)</span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="price">59.99₽ <a style="color: gray;">шт.</a></span>
-                                    <button class="btn cart-btn">
-                                        <i class="bi bi-cart-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                                        <!-- Product Card 3 -->
-                                        <div class="col-md-3">
-                        <div class="product-card shadow-sm">
-                            <div class="position-relative">
-                                <img src="../template/assets/500x500.png" class="product-image w-100" alt="Product">
-                                <div class="position-absolute top-0 start-0"
-                                    style="padding-left: 6px; padding-top: 2px;">
-                                    <span class="badge text-bg-danger discount-badge">СКИДКА 50%</span>
-                                    <span class="badge text-bg-success discount-badge">ХИТ</span>
-                                </div>
-                                <!-- <button class="wishlist-btn">
-                                    <i class="bi bi-heart"></i>
-                                </button> -->
-                            </div>
-                            <div class="p-3">
-                                <span class="category-badge mb-2 d-inline-block">Accessories</span>
-                                <h6 class="mb-1">Leather Wallet</h6>
-                                <div class="rating-stars mb-2">
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <i class="bi bi-star-fill"></i>
-                                    <span class="text-muted ms-2">(5.0)</span>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="price">59.99₽ <a style="color: gray;">шт.</a></span>
-                                    <button class="btn cart-btn">
-                                        <i class="bi bi-cart-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
     <div class="d-flex justify-content-center" style="margin-top: 50px;">
@@ -212,3 +213,165 @@
         </div>
     </div>
 </div>
+
+<!-- Добавляем CSS для кнопок корзины -->
+<style>
+.quantity-control-group {
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+}
+
+.quantity-control-group .btn {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quantity-display {
+    padding: 0 0.75rem;
+    font-weight: 500;
+}
+</style>
+
+<!-- JavaScript для обработки кнопок корзины -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик для кнопки "Добавить в корзину"
+    const addToCartButtons = document.querySelectorAll('.add-to-cart-btn');
+    
+    addToCartButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            addToCart(productId, 1);
+        });
+    });
+    
+    // Обработчики для кнопок увеличения/уменьшения количества
+    const increaseButtons = document.querySelectorAll('.increase-quantity-btn');
+    const decreaseButtons = document.querySelectorAll('.decrease-quantity-btn');
+    
+    increaseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            addToCart(productId, 1);
+        });
+    });
+    
+    decreaseButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.getAttribute('data-product-id');
+            updateCart(productId, 'decrease_quantity');
+        });
+    });
+    
+    // Функция для добавления товара в корзину
+    function addToCart(productId, quantity) {
+        fetch(`/main/catalogue.php?action=add_to_cart&id_to_cart=${productId}&ajax=1`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCartUI(productId, data.new_quantity, data.total_cart_quantity);
+            } else {
+                console.error('Ошибка при добавлении товара в корзину:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка сети при добавлении товара в корзину:', error);
+        });
+    }
+    
+    // Функция для обновления корзины (уменьшение количества)
+    function updateCart(productId, action) {
+        fetch(`/main/catalogue.php?action=${action}&id_to_cart=${productId}&ajax=1`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCartUI(productId, data.new_quantity, data.total_cart_quantity);
+            } else {
+                console.error('Ошибка при обновлении корзины:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка сети при обновлении корзины:', error);
+        });
+    }
+    
+    // Функция для обновления UI корзины
+    function updateCartUI(productId, newQuantity, totalQuantity) {
+        // Обновляем счетчик корзины в шапке
+        const cartCounterElement = document.getElementById('cart-counter');
+        if (cartCounterElement) {
+            cartCounterElement.textContent = totalQuantity;
+            if (totalQuantity > 0) {
+                cartCounterElement.style.display = 'inline-block';
+            } else {
+                cartCounterElement.style.display = 'none';
+            }
+        }
+        
+        // Обновляем элементы управления корзиной для конкретного товара
+        const cartControlsElement = document.getElementById(`cart-controls-${productId}`);
+        
+        if (cartControlsElement) {
+            if (newQuantity > 0) {
+                // Если товар в корзине, показываем управление количеством
+                cartControlsElement.innerHTML = `
+                    <div class="quantity-control-group">
+                        <button class="btn btn-sm btn-outline-primary decrease-quantity-btn" data-product-id="${productId}">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <span class="quantity-display">${newQuantity}</span>
+                        <button class="btn btn-sm btn-outline-primary increase-quantity-btn" data-product-id="${productId}">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Добавляем новые обработчики событий
+                const newIncreaseBtn = cartControlsElement.querySelector('.increase-quantity-btn');
+                const newDecreaseBtn = cartControlsElement.querySelector('.decrease-quantity-btn');
+                
+                if (newIncreaseBtn) {
+                    newIncreaseBtn.addEventListener('click', function() {
+                        addToCart(productId, 1);
+                    });
+                }
+                
+                if (newDecreaseBtn) {
+                    newDecreaseBtn.addEventListener('click', function() {
+                        updateCart(productId, 'decrease_quantity');
+                    });
+                }
+            } else {
+                // Если товара нет в корзине, показываем кнопку добавления
+                cartControlsElement.innerHTML = `
+                    <button class="btn cart-btn add-to-cart-btn" data-product-id="${productId}">
+                        <i class="bi bi-cart-plus"></i>
+                    </button>
+                `;
+                
+                // Добавляем новый обработчик события
+                const newAddBtn = cartControlsElement.querySelector('.add-to-cart-btn');
+                if (newAddBtn) {
+                    newAddBtn.addEventListener('click', function() {
+                        addToCart(productId, 1);
+                    });
+                }
+            }
+        }
+    }
+});
+</script>
