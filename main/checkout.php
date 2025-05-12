@@ -2,6 +2,14 @@
 // Подключаем необходимые файлы
 include '../template/header.php'; // Это должно запустить сессию
 require_once '../config.php'; 
+// Добавляем PHPMailer
+require_once '../vendor/phpmailer/phpmailer/src/Exception.php';
+require_once '../vendor/phpmailer/phpmailer/src/PHPMailer.php';
+require_once '../vendor/phpmailer/phpmailer/src/SMTP.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 // Удаляем ссылку на DaData PHP библиотеку, так как будем использовать JS версию
 // require_once '../vendor/autoload.php';
 
@@ -118,6 +126,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
     }
     
     if (empty($errors)) {
+        // Генерируем уникальный номер заказа
+        $order_number = 'ORD-' . strtoupper(substr(uniqid(), -6));
+        
+        // Формируем данные заказа
+        $order_date = date('Y-m-d H:i:s');
+        $order_items = [];
+        $order_total = 0;
+        
+        foreach ($cart_products as $product) {
+            $order_items[] = [
+                'id' => $product['id'],
+                'title' => $product['title'],
+                'price' => $product['price'],
+                'quantity' => $product['quantity_in_cart'],
+                'total' => $product['item_total_price']
+            ];
+            $order_total += $product['item_total_price'];
+        }
+        
+        // Рассчитываем итоговую сумму
+        $shipping_cost = 10.00; // Фиксированная стоимость доставки
+        $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0;
+        $grand_total = $order_total + $shipping_cost - $discount_amount;
+        
+        // Получаем информацию о промокоде, если он был применен
+        $promo_code = isset($_SESSION['applied_promo_code']) ? $_SESSION['applied_promo_code'] : null;
+        
+        // Отправляем email-уведомление о заказе
+        $mail_sent = sendOrderConfirmationEmail(
+            $email, 
+            $name, 
+            $order_number, 
+            $order_date, 
+            $order_items, 
+            $order_total, 
+            $shipping_cost, 
+            $discount_amount, 
+            $grand_total, 
+            $address, 
+            $phone, 
+            $payment_method,
+            $promo_code
+        );
+        
+        if (!$mail_sent) {
+            // Логируем ошибку, но позволяем процессу продолжиться
+            error_log("Failed to send order confirmation email to: $email");
+        }
+        
         // В реальном приложении здесь должно быть сохранение заказа в БД
         // и интеграция с платежной системой
         
@@ -126,10 +183,154 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
         unset($_SESSION['applied_promo_code']);
         unset($_SESSION['promo_discount']);
         
+        // Сохраняем номер заказа для отображения на странице подтверждения
+        $_SESSION['last_order_number'] = $order_number;
+        
         // Перенаправляем на страницу успешного заказа
         $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Ваш заказ успешно оформлен! Благодарим за покупку.'];
         header('Location: order_success.php');
         exit;
+    }
+}
+
+/**
+ * Отправляет email-уведомление о подтверждении заказа
+ */
+function sendOrderConfirmationEmail($email, $name, $order_number, $order_date, $order_items, $order_total, $shipping, $discount, $grand_total, $address, $phone, $payment_method, $promo_code = null) {
+    // Создаем экземпляр PHPMailer
+    $mail = new PHPMailer(true);
+    
+    try {
+        // Настройки сервера
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com'; // Замените на ваш SMTP-сервер
+        $mail->SMTPAuth = true;
+        $mail->Username = 'your-email@gmail.com'; // Замените на ваш email
+        $mail->Password = 'your-password'; // Замените на ваш пароль
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+        
+        // Получатели
+        $mail->setFrom('noreply@yourshop.com', 'Ваш Магазин');
+        $mail->addAddress($email, $name);
+        
+        // Контент
+        $mail->isHTML(true);
+        $mail->CharSet = 'UTF-8';
+        $mail->Subject = "Ваш заказ #{$order_number} подтвержден";
+        
+        // Формируем HTML-тело письма
+        $message = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; }
+                .header { text-align: center; padding: 20px; background-color: #f8f9fa; }
+                .content { padding: 20px; }
+                .order-details { margin-bottom: 30px; }
+                .order-summary { margin-bottom: 30px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background-color: #f8f9fa; }
+                .total-row td { font-weight: bold; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #777; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h2>Заказ подтвержден</h2>
+                    <p>Спасибо за ваш заказ!</p>
+                </div>
+                
+                <div class='content'>
+                    <div class='order-details'>
+                        <h3>Информация о заказе:</h3>
+                        <p><strong>Номер заказа:</strong> {$order_number}</p>
+                        <p><strong>Дата заказа:</strong> " . date('d.m.Y H:i', strtotime($order_date)) . "</p>
+                        <p><strong>Способ оплаты:</strong> " . ($payment_method == 'card' ? 'Банковская карта' : 'Наличными при получении') . "</p>
+                        " . ($promo_code ? "<p><strong>Применен промокод:</strong> {$promo_code}</p>" : "") . "
+                    </div>
+                    
+                    <div class='order-summary'>
+                        <h3>Товары в заказе:</h3>
+                        <table>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Цена</th>
+                                <th>Кол-во</th>
+                                <th>Сумма</th>
+                            </tr>";
+        
+        // Добавляем товары
+        foreach ($order_items as $item) {
+            $message .= "
+                            <tr>
+                                <td>{$item['title']}</td>
+                                <td>" . number_format($item['price'], 0, '.', ' ') . "₽</td>
+                                <td>{$item['quantity']}</td>
+                                <td>" . number_format($item['total'], 0, '.', ' ') . "₽</td>
+                            </tr>";
+        }
+        
+        // Добавляем итоги
+        $message .= "
+                            <tr>
+                                <td colspan='3' style='text-align:right;'>Стоимость товаров:</td>
+                                <td>" . number_format($order_total, 0, '.', ' ') . "₽</td>
+                            </tr>
+                            <tr>
+                                <td colspan='3' style='text-align:right;'>Доставка:</td>
+                                <td>" . number_format($shipping, 0, '.', ' ') . "₽</td>
+                            </tr>";
+        
+        if ($discount > 0) {
+            $message .= "
+                            <tr>
+                                <td colspan='3' style='text-align:right;'>Скидка:</td>
+                                <td>-" . number_format($discount, 0, '.', ' ') . "₽</td>
+                            </tr>";
+        }
+        
+        $message .= "
+                            <tr class='total-row'>
+                                <td colspan='3' style='text-align:right;'>Итого к оплате:</td>
+                                <td>" . number_format($grand_total, 0, '.', ' ') . "₽</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class='customer-info'>
+                        <h3>Информация о получателе:</h3>
+                        <p><strong>Имя:</strong> {$name}</p>
+                        <p><strong>Email:</strong> {$email}</p>
+                        <p><strong>Телефон:</strong> {$phone}</p>
+                        <p><strong>Адрес доставки:</strong> {$address}</p>
+                    </div>
+                </div>
+                
+                <div class='footer'>
+                    <p>Если у вас возникли вопросы, свяжитесь с нашей службой поддержки.</p>
+                    <p>&copy; " . date('Y') . " Ваш Магазин. Все права защищены.</p>
+                </div>
+            </div>
+        </body>
+        </html>";
+        
+        $mail->Body = $message;
+        $mail->AltBody = "Заказ #{$order_number} подтвержден. Спасибо за покупку!";
+        
+        // В режиме разработки просто логируем, что письмо должно быть отправлено
+        error_log("Mail would be sent to: $email, Subject: Ваш заказ #{$order_number} подтвержден");
+        
+        // Раскомментируйте строку ниже для реальной отправки писем
+        // $mail->send();
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Mail sending failed: {$mail->ErrorInfo}");
+        return false;
     }
 }
 ?>

@@ -33,6 +33,9 @@ include '../template/header.php';
                             <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
                         </div>
                         <h2 class="card-title mb-3">Заказ успешно оформлен!</h2>
+                        <?php if (isset($_SESSION['last_order_number'])): ?>
+                        <h4 class="mb-3">Номер вашего заказа: <strong><?php echo htmlspecialchars($_SESSION['last_order_number']); ?></strong></h4>
+                        <?php endif; ?>
                         <p class="card-text mb-4">Благодарим за покупку! Уведомление о заказе отправлено на вашу электронную почту.</p>
                         <div class="d-flex justify-content-center mt-4">
                             <a href="/main/catalogue.php" class="btn btn-primary me-2">Вернуться в каталог</a>
