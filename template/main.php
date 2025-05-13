@@ -5,28 +5,26 @@
         <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="1" aria-label="Slide 2"></button>
         <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="2" aria-label="Slide 3"></button>
     </div>
-    <div class="carousel-inner">
+    <div class="carousel-inner" style="height: 400px; overflow: hidden;">
         <div class="carousel-item active" data-bs-interval="10000">
-            <img src="template/assets/1.jpg" class="d-block w-100" alt="...">
+            <img src="template/assets/1.jpg?v=<?php echo time(); ?>" class="d-block w-100" alt="Строительные материалы" style="object-fit: cover; height: 400px;">
             <div class="carousel-caption d-none d-md-block">
-                <h1 style="color: whitesmoke">Удобный шаблонизатор</h1>
-                <p style="color: whitesmoke">Все визуальные компоненты разбиты на части для удобного редактикрования.
-                </p>
+                <h1 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Качественные строительные материалы</h1>
+                <p style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Широкий ассортимент материалов для строительства и ремонта.</p>
             </div>
         </div>
         <div class="carousel-item" data-bs-interval="2000">
-            <img src="template/assets/2.jpg" class="d-block w-100" alt="...">
+            <img src="template/assets/2.jpg?v=<?php echo time(); ?>" class="d-block w-100" alt="Инструменты" style="object-fit: cover; height: 400px;">
             <div class="carousel-caption d-none d-md-block">
-                <h1 style="color: whitesmoke">Реферальная система</h1>
-                <p style="color: whitesmoke">Система считает, сколько человек было приведено от того или иного человека.
-                </p>
+                <h1 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Профессиональные инструменты</h1>
+                <p style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Инструменты и оборудование от ведущих производителей.</p>
             </div>
         </div>
         <div class="carousel-item">
-            <img src="template/assets/3.jpg" class="d-block w-100" alt="...">
+            <img src="template/assets/3.jpg?v=<?php echo time(); ?>" class="d-block w-100" alt="Отделочные материалы" style="object-fit: cover; height: 400px;">
             <div class="carousel-caption d-none d-md-block">
-                <h1 style="color: whitesmoke">Система параметров</h1>
-                <p style="color: whitesmoke">Возможность создать неограниченное количество параметров для товаров.</p>
+                <h1 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Отделочные материалы</h1>
+                <p style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Всё для внутренней и внешней отделки вашего дома.</p>
             </div>
         </div>
     </div>
