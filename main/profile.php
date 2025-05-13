@@ -30,6 +30,74 @@ try {
     // В реальном приложении здесь может быть более общее сообщение или логирование
 }
 
+// Получаем историю заказов пользователя
+$orders = [];
+try {
+    $stmt = $pdo->prepare("SELECT id, total_amount, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$user_id]);
+    $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Ошибка при получении истории заказов: " . $e->getMessage());
+}
+
+// Обработка повторного заказа
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repeat_order'])) {
+    $order_id = (int)$_POST['repeat_order'];
+    
+    try {
+        // Проверяем существование заказа и принадлежность текущему пользователю
+        $check_stmt = $pdo->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ?");
+        $check_stmt->execute([$order_id, $user_id]);
+        
+        if ($check_stmt->rowCount() > 0) {
+            // Получаем товары из заказа
+            $items_stmt = $pdo->prepare("SELECT product_id, quantity FROM order_items WHERE order_id = ?");
+            $items_stmt->execute([$order_id]);
+            $items = $items_stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Инициализируем корзину, если она ещё не создана
+            if (!isset($_SESSION['cart'])) {
+                $_SESSION['cart'] = [];
+            }
+            
+            // Добавляем товары в корзину
+            foreach ($items as $item) {
+                // Проверяем, есть ли товар в наличии
+                $product_stmt = $pdo->prepare("SELECT stock_quantity FROM goods WHERE id = ?");
+                $product_stmt->execute([$item['product_id']]);
+                $product = $product_stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($product && $product['stock_quantity'] > 0) {
+                    // Если товар уже есть в корзине, увеличиваем количество
+                    if (isset($_SESSION['cart'][$item['product_id']])) {
+                        $_SESSION['cart'][$item['product_id']] += $item['quantity'];
+                    } else {
+                        $_SESSION['cart'][$item['product_id']] = $item['quantity'];
+                    }
+                    
+                    // Проверяем, не превышает ли новое количество доступное на складе
+                    if ($_SESSION['cart'][$item['product_id']] > $product['stock_quantity']) {
+                        $_SESSION['cart'][$item['product_id']] = $product['stock_quantity'];
+                    }
+                }
+            }
+            
+            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Товары из заказа добавлены в корзину!'];
+            header('Location: cart.php');
+            exit();
+        } else {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Заказ не найден или не принадлежит вам.'];
+        }
+    } catch (PDOException $e) {
+        error_log("Ошибка при повторении заказа: " . $e->getMessage());
+        $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Произошла ошибка при обработке заказа.'];
+    }
+    
+    // Перенаправляем обратно на страницу профиля, если что-то пошло не так
+    header('Location: profile.php');
+    exit();
+}
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -53,6 +121,14 @@ try {
     <h2 class="text-center">Мой профиль</h2>
     <?php if (!empty($error_message)): ?>
         <div class="alert alert-danger"><?php echo htmlspecialchars($error_message); ?></div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <div class="alert alert-<?php echo $_SESSION['flash_message']['type']; ?> alert-dismissible fade show">
+            <?php echo $_SESSION['flash_message']['text']; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <?php unset($_SESSION['flash_message']); ?>
     <?php endif; ?>
 
     <?php if ($user_data): ?>
@@ -81,34 +157,39 @@ try {
             <thead class="table-dark">
                 <tr>
                     <th>ID заказа</th>
-                                        <th>Сумма</th>
+                    <th>Сумма</th>
                     <th>Статус</th>
                     <th>Дата</th>
                     <th>Действие</th>
                 </tr>
             </thead>
             <tbody>
-                                    <tr>
-                        <td>#80</td>
-                                                <td>1 520.00 ₽</td>
-                        <td>
-                                                            В обработке                                                    </td>
-                        <td>03.05.2025 11:29</td>
+                <?php if (empty($orders)): ?>
+                    <tr>
+                        <td colspan="5" class="text-center">У вас еще нет заказов</td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($orders as $order): ?>
+                    <tr>
+                        <td>#<?php echo $order['id']; ?></td>
+                        <td><?php echo number_format($order['total_amount'], 2, '.', ' '); ?> ₽</td>
+                        <td><?php echo htmlspecialchars($order['status']); ?></td>
+                        <td><?php echo date('d.m.Y H:i', strtotime($order['created_at'])); ?></td>
                         <td>
                             <div class="d-grid gap-2">
-                                <button class="btn btn-info btn-sm view-order-btn" data-bs-toggle="modal" data-bs-target="#orderDetailsModal" data-order-id="80">
+                                <button class="btn btn-info btn-sm view-order-btn" data-bs-toggle="modal" data-bs-target="#orderDetailsModal" data-order-id="<?php echo $order['id']; ?>">
                                     Посмотреть заказ
                                 </button>
-
-                                
-                                                                    <form method="POST" style="display:inline-block;">
-                                        <input type="hidden" name="repeat_order" value="80">
-                                        <button type="submit" class="btn btn-success btn-sm w-100">Повторить заказ</button>
-                                    </form>
-                                                            </div>
+                                <form method="POST" style="display:inline-block;">
+                                    <input type="hidden" name="repeat_order" value="<?php echo $order['id']; ?>">
+                                    <button type="submit" class="btn btn-success btn-sm w-100">Повторить заказ</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
-                            </tbody>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
         </table>
     </div>
 
@@ -121,43 +202,9 @@ try {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="orderDetailsContent"> 
-              <p><strong>Имя клиента:</strong> Артур Вадимович Мишин</p>
-              <p><strong>Телефон:</strong> 89626345055</p>
-              <p><strong>Адрес:</strong> Камышинская 15</p>
-              <p><strong>Примечание:</strong> 123</p>
-              <p><strong>Способ оплаты:</strong> Оплата картой</p>
-              <h4>Товары:</h4>
-              <table class="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Товар</th>
-                    <th>Количество</th>
-                    <th>Цена за шт.</th>
-                    <th>Сумма</th>
-                    <th>Сумма со скидкой</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  
-                <tr>
-                  <td>Игрушка "Развивашка"</td>
-                  <td>1 шт.</td>
-                  <td>1 520.00 ₽</td>
-                  <td>1 520.00 ₽</td>
-                  <td>1 520.00 ₽</td>
-                </tr>
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="3" class="text-end"><strong>Итого:</strong></td>
-                    <td><strong>1 520.00 ₽</strong></td>
-                    <td><strong>1 520.00 ₽</strong></td>
-                  </tr>
-                  
-                </tfoot>
-              </table>
-            </div>
+        <div id="orderDetailsContent">
+            <p class="text-center">Загрузка информации о заказе...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -242,34 +289,61 @@ document.querySelectorAll('.status-form').forEach(form => {
 document.querySelectorAll('.view-order-btn').forEach(button => {
   button.addEventListener('click', function () {
     const orderId = this.getAttribute('data-order-id');
+    const orderDetailsContent = document.getElementById('orderDetailsContent');
+    
+    // Показываем загрузку
+    orderDetailsContent.innerHTML = '<p class="text-center"><i class="bi bi-hourglass-split me-2"></i>Загрузка информации о заказе...</p>';
+    
     if (orderId) {
-        fetch('/public/get_order_details.php', {
+        fetch('get_order_details.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order_id: orderId })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка сети: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
-          const orderDetailsContent = document.getElementById('orderDetailsContent');
+          console.log('Полученные данные:', data);
+          
           if (data.success) {
             let itemsHtml = '';
-            data.items.forEach(item => {
-              itemsHtml += `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity} шт.</td>
-                  <td>${item.price} ₽</td>
-                  <td>${item.sum} ₽</td>
-                  <td>${item.sum_with_discount} ₽</td>
-                </tr>`;
-            });
+            
+            if (data.items && data.items.length > 0) {
+              data.items.forEach(item => {
+                const price = parseFloat(item.price) || 0;
+                const quantity = parseInt(item.quantity) || 0;
+                const discountPercentage = parseInt(item.discount_percentage) || 0;
+                
+                const totalPrice = price * quantity;
+                const discountedPrice = price * (1 - discountPercentage/100) * quantity;
+                
+                itemsHtml += `
+                  <tr>
+                    <td>${item.title || 'Товар не найден'}</td>
+                    <td>${quantity} шт.</td>
+                    <td>${price.toFixed(2)} ₽</td>
+                    <td>${totalPrice.toFixed(2)} ₽</td>
+                    <td>${discountedPrice.toFixed(2)} ₽</td>
+                  </tr>`;
+              });
+            } else {
+              itemsHtml = '<tr><td colspan="5" class="text-center">Товары не найдены</td></tr>';
+            }
+
+            const totalAmount = parseFloat(data.total_amount) || 0;
+            const discountAmount = parseFloat(data.discount_amount) || 0;
+            const finalAmount = totalAmount - discountAmount;
 
             orderDetailsContent.innerHTML = ` 
-              <p><strong>Имя клиента:</strong> ${data.client.full_name}</p>
-              <p><strong>Телефон:</strong> ${data.client.phone}</p>
-              <p><strong>Адрес:</strong> ${data.client.address}</p>
-              <p><strong>Примечание:</strong> ${data.client.note}</p>
-              <p><strong>Способ оплаты:</strong> ${data.client.payment_method}</p>
+              <p><strong>Номер заказа:</strong> #${data.order_id}</p>
+              <p><strong>Дата заказа:</strong> ${data.created_at}</p>
+              <p><strong>Статус заказа:</strong> ${data.status}</p>
+              <p><strong>Адрес доставки:</strong> ${data.shipping_address || 'Не указан'}</p>
+              <p><strong>Способ оплаты:</strong> ${data.payment_method || 'Не указан'}</p>
               <h4>Товары:</h4>
               <table class="table table-bordered">
                 <thead>
@@ -287,28 +361,46 @@ document.querySelectorAll('.view-order-btn').forEach(button => {
                 <tfoot>
                   <tr>
                     <td colspan="3" class="text-end"><strong>Итого:</strong></td>
-                    <td><strong>${data.total_price_without_discount} ₽</strong></td>
-                    <td><strong>${data.total_price} ₽</strong></td>
+                    <td><strong>${totalAmount.toFixed(2)} ₽</strong></td>
+                    <td><strong>${finalAmount.toFixed(2)} ₽</strong></td>
                   </tr>
-                  ${data.discount_percentage > 0 ? `
+                  ${discountAmount > 0 ? `
                   <tr>
                     <td colspan="5">
-                      <strong>Применена скидка:</strong> ${data.discount_percentage}%<br>
-                      <strong>Ваша выгода:</strong> ${data.discount_amount} ₽
+                      <strong>Применена скидка:</strong> ${discountAmount.toFixed(2)} ₽
+                    </td>
+                  </tr>
+                  ` : ''}
+                  ${data.promo_code ? `
+                  <tr>
+                    <td colspan="5">
+                      <strong>Использован промокод:</strong> ${data.promo_code}
                     </td>
                   </tr>
                   ` : ''}
                 </tfoot>
               </table>
+              <div class="mt-3 d-flex justify-content-end">
+                <button class="btn btn-sm btn-outline-primary send-order-email" data-order-id="${data.order_id}">
+                  <i class="bi bi-envelope me-1"></i> Отправить на email
+                </button>
+              </div>
             `;
           } else {
-            orderDetailsContent.innerHTML = `<p>${data.message}</p>`;
+            orderDetailsContent.innerHTML = `
+              <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                ${data.message || 'Ошибка при загрузке данных заказа'}
+              </div>`;
           }
         })
         .catch(error => {
           console.error('Ошибка:', error);
-          const orderDetailsContent = document.getElementById('orderDetailsContent');
-          orderDetailsContent.innerHTML = '<p>Ошибка при загрузке данных заказа.</p>';
+          orderDetailsContent.innerHTML = `
+            <div class="alert alert-danger">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Ошибка при загрузке данных заказа: ${error.message}
+            </div>`;
         });
     }
   });
@@ -362,6 +454,65 @@ document.getElementById('emailForm').addEventListener('submit', async function(e
     } catch (error) {
         console.error('Ошибка:', error);
         alert('Произошла ошибка при отправке письма: ' + error.message);
+    }
+});
+
+// Обработчик для кнопки отправки заказа на email
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('send-order-email') || e.target.closest('.send-order-email')) {
+        const button = e.target.classList.contains('send-order-email') ? e.target : e.target.closest('.send-order-email');
+        const orderId = button.getAttribute('data-order-id');
+        
+        button.disabled = true;
+        button.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Отправка...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('order_id', orderId);
+            
+            const response = await fetch('send_order_email.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Показываем уведомление об успехе
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+                notification.style.zIndex = '9999';
+                notification.textContent = result.message || 'Информация о заказе отправлена на ваш email';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+                
+                // Восстанавливаем кнопку
+                button.disabled = false;
+                button.innerHTML = '<i class="bi bi-envelope me-1"></i> Отправить на email';
+            } else {
+                throw new Error(result.message || 'Произошла ошибка');
+            }
+        } catch (error) {
+            console.error('Ошибка:', error);
+            
+            // Показываем уведомление об ошибке
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-danger position-fixed top-0 end-0 m-3';
+            notification.style.zIndex = '9999';
+            notification.textContent = 'Ошибка: ' + error.message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+            
+            // Восстанавливаем кнопку
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-envelope me-1"></i> Отправить на email';
+        }
     }
 });
 </script></main>

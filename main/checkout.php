@@ -137,98 +137,156 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
     }
     
     if (empty($errors)) {
-        // Генерируем уникальный номер заказа
-        $order_number = 'ORD-' . strtoupper(substr(uniqid(), -6));
-        
-        // Формируем данные заказа
-        $order_date = date('Y-m-d H:i:s');
-        $order_items = [];
-        $order_total = 0;
-        
-        foreach ($cart_products as $product) {
-            $order_items[] = [
-                'id' => $product['id'],
-                'title' => $product['title'],
-                'price' => $product['price'],
-                'quantity' => $product['quantity_in_cart'],
-                'total' => $product['item_total_price']
-            ];
-            $order_total += $product['item_total_price'];
+        try {
+            // Начинаем транзакцию
+            $pdo->beginTransaction();
+            
+            // Получаем ID пользователя, если он авторизован, или устанавливаем null для гостя
+            $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+            
+            // Проверяем, что есть ID пользователя (должен быть, т.к. мы проверяем авторизацию выше)
+            if ($user_id === null) {
+                throw new Exception('Пользователь не авторизован');
+            }
+            
+            // Рассчитываем итоговую сумму
+            $shipping_cost = 10.00; // Фиксированная стоимость доставки
+            $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0;
+            $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
+            
+            // Получаем информацию о промокоде, если он был применен
+            $promo_code = isset($_SESSION['applied_promo_code']) ? $_SESSION['applied_promo_code'] : null;
+            
+            // Создаем запись в таблице orders
+            $order_stmt = $pdo->prepare("
+                INSERT INTO orders (
+                    user_id, total_amount, status, created_at, 
+                    shipping_address, payment_method, promo_code, discount_amount
+                ) VALUES (
+                    ?, ?, 'В обработке', NOW(), ?, ?, ?, ?
+                )
+            ");
+            
+            $order_stmt->execute([
+                $user_id,
+                $grand_total,
+                $address,
+                $payment_method,
+                $promo_code,
+                $discount_amount
+            ]);
+            
+            // Получаем ID только что созданного заказа
+            $order_id = $pdo->lastInsertId();
+            
+            // Добавляем товары в заказ
+            $item_stmt = $pdo->prepare("
+                INSERT INTO order_items (
+                    order_id, product_id, quantity, price, discount_percentage
+                ) VALUES (
+                    ?, ?, ?, ?, ?
+                )
+            ");
+            
+            foreach ($cart_products as $product) {
+                $item_stmt->execute([
+                    $order_id,
+                    $product['id'],
+                    $product['quantity_in_cart'],
+                    $product['price'],
+                    $product['discount']
+                ]);
+                
+                // Обновляем количество товара на складе
+                $update_stock_stmt = $pdo->prepare("
+                    UPDATE goods
+                    SET stock_quantity = stock_quantity - ?
+                    WHERE id = ? AND stock_quantity >= ?
+                ");
+                
+                $update_stock_stmt->execute([
+                    $product['quantity_in_cart'],
+                    $product['id'],
+                    $product['quantity_in_cart']
+                ]);
+            }
+            
+            // Завершаем транзакцию
+            $pdo->commit();
+            
+            // Отправляем email-уведомление о заказе
+            $mail_sent = sendOrderConfirmationEmail(
+                $email, 
+                $name, 
+                $order_id, 
+                date('Y-m-d H:i:s'), 
+                $cart_products, 
+                $total_cart_value, 
+                $shipping_cost, 
+                $discount_amount, 
+                $grand_total, 
+                $address, 
+                $phone, 
+                $payment_method,
+                $promo_code
+            );
+            
+            if (!$mail_sent) {
+                // Логируем ошибку, но позволяем процессу продолжиться
+                error_log("Failed to send order confirmation email to: $email");
+            }
+            
+            // Очищаем корзину
+            $_SESSION['cart'] = [];
+            unset($_SESSION['applied_promo_code']);
+            unset($_SESSION['promo_discount']);
+            
+            // Сохраняем номер заказа для отображения на странице подтверждения
+            $_SESSION['last_order_number'] = $order_id;
+            
+            // Перенаправляем на страницу успешного заказа
+            $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Ваш заказ #' . $order_id . ' успешно оформлен! Благодарим за покупку.'];
+            header('Location: order_success.php');
+            exit;
+        } catch (Exception $e) {
+            // В случае ошибки отменяем транзакцию
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            
+            error_log("Ошибка при оформлении заказа: " . $e->getMessage());
+            $_SESSION['flash_message'] = ['type' => 'danger', 'text' => 'Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте позже.'];
+            header('Location: cart.php');
+            exit;
         }
-        
-        // Рассчитываем итоговую сумму
-        $shipping_cost = 10.00; // Фиксированная стоимость доставки
-        $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0;
-        $grand_total = $order_total + $shipping_cost - $discount_amount;
-        
-        // Получаем информацию о промокоде, если он был применен
-        $promo_code = isset($_SESSION['applied_promo_code']) ? $_SESSION['applied_promo_code'] : null;
-        
-        // Отправляем email-уведомление о заказе
-        $mail_sent = sendOrderConfirmationEmail(
-            $email, 
-            $name, 
-            $order_number, 
-            $order_date, 
-            $order_items, 
-            $order_total, 
-            $shipping_cost, 
-            $discount_amount, 
-            $grand_total, 
-            $address, 
-            $phone, 
-            $payment_method,
-            $promo_code
-        );
-        
-        if (!$mail_sent) {
-            // Логируем ошибку, но позволяем процессу продолжиться
-            error_log("Failed to send order confirmation email to: $email");
-        }
-        
-        // В реальном приложении здесь должно быть сохранение заказа в БД
-        // и интеграция с платежной системой
-        
-        // Очищаем корзину
-        $_SESSION['cart'] = [];
-        unset($_SESSION['applied_promo_code']);
-        unset($_SESSION['promo_discount']);
-        
-        // Сохраняем номер заказа для отображения на странице подтверждения
-        $_SESSION['last_order_number'] = $order_number;
-        
-        // Перенаправляем на страницу успешного заказа
-        $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Ваш заказ успешно оформлен! Благодарим за покупку.'];
-        header('Location: order_success.php');
-        exit;
     }
 }
 
 /**
  * Отправляет email-уведомление о подтверждении заказа
  */
-function sendOrderConfirmationEmail($email, $name, $order_number, $order_date, $order_items, $order_total, $shipping, $discount, $grand_total, $address, $phone, $payment_method, $promo_code = null) {
+function sendOrderConfirmationEmail($email, $name, $order_id, $order_date, $order_items, $order_total, $shipping, $discount, $grand_total, $address, $phone, $payment_method, $promo_code = null) {
     // Создаем экземпляр PHPMailer
     $mail = new PHPMailer(true);
     
     try {
-        // Настройки сервера
+        // Настройки сервера из config.php
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com'; // Замените на ваш SMTP-сервер
+        $mail->Host = MAIL_SMTP_HOST;
         $mail->SMTPAuth = true;
-        $mail->Username = 'your-email@gmail.com'; // Замените на ваш email
-        $mail->Password = 'your-password'; // Замените на ваш пароль
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Username = MAIL_SMTP_USERNAME;
+        $mail->Password = MAIL_SMTP_PASSWORD;
+        $mail->SMTPSecure = MAIL_SMTP_SECURE == 'tls' ? PHPMailer::ENCRYPTION_STARTTLS : PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port = MAIL_SMTP_PORT;
         
         // Получатели
-        $mail->setFrom('noreply@yourshop.com', 'Ваш Магазин');
+        $mail->setFrom(MAIL_FROM_ADDRESS, MAIL_FROM_NAME);
         $mail->addAddress($email, $name);
         
         // Контент
         $mail->isHTML(true);
         $mail->CharSet = 'UTF-8';
-        $mail->Subject = "Ваш заказ #{$order_number} подтвержден";
+        $mail->Subject = "Ваш заказ #{$order_id} подтвержден";
         
         // Формируем HTML-тело письма
         $message = "
@@ -258,7 +316,7 @@ function sendOrderConfirmationEmail($email, $name, $order_number, $order_date, $
                 <div class='content'>
                     <div class='order-details'>
                         <h3>Информация о заказе:</h3>
-                        <p><strong>Номер заказа:</strong> {$order_number}</p>
+                        <p><strong>Номер заказа:</strong> {$order_id}</p>
                         <p><strong>Дата заказа:</strong> " . date('d.m.Y H:i', strtotime($order_date)) . "</p>
                         <p><strong>Способ оплаты:</strong> " . ($payment_method == 'card' ? 'Банковская карта' : 'Наличными при получении') . "</p>
                         " . ($promo_code ? "<p><strong>Применен промокод:</strong> {$promo_code}</p>" : "") . "
@@ -280,8 +338,8 @@ function sendOrderConfirmationEmail($email, $name, $order_number, $order_date, $
                             <tr>
                                 <td>{$item['title']}</td>
                                 <td>" . number_format($item['price'], 0, '.', ' ') . "₽</td>
-                                <td>{$item['quantity']}</td>
-                                <td>" . number_format($item['total'], 0, '.', ' ') . "₽</td>
+                                <td>{$item['quantity_in_cart']}</td>
+                                <td>" . number_format($item['item_total_price'], 0, '.', ' ') . "₽</td>
                             </tr>";
         }
         
@@ -323,25 +381,37 @@ function sendOrderConfirmationEmail($email, $name, $order_number, $order_date, $
                 
                 <div class='footer'>
                     <p>Если у вас возникли вопросы, свяжитесь с нашей службой поддержки.</p>
-                    <p>&copy; " . date('Y') . " Ваш Магазин. Все права защищены.</p>
+                    <p>&copy; " . date('Y') . " " . MAIL_FROM_NAME . ". Все права защищены.</p>
                 </div>
             </div>
         </body>
         </html>";
         
         $mail->Body = $message;
-        $mail->AltBody = "Заказ #{$order_number} подтвержден. Спасибо за покупку!";
+        $mail->AltBody = "Заказ #{$order_id} подтвержден. Спасибо за покупку!";
         
-        // В режиме разработки просто логируем, что письмо должно быть отправлено
-        error_log("Mail would be sent to: $email, Subject: Ваш заказ #{$order_number} подтвержден");
+        // Сохраняем содержимое письма в лог для отладки
+        error_log("Email для отправки: " . $email);
+        error_log("Тема письма: Ваш заказ #{$order_id} подтвержден");
         
-        // Раскомментируйте строку ниже для реальной отправки писем
-        // $mail->send();
+        // Сохраняем копию HTML письма в файл для отладки
+        $email_debug_dir = __DIR__ . '/../logs';
+        if (!is_dir($email_debug_dir)) {
+            mkdir($email_debug_dir, 0755, true);
+        }
+        file_put_contents($email_debug_dir . "/order_email_{$order_id}.html", $message);
         
+        // Отправляем письмо
+        $mail->send();
+        error_log("Письмо успешно отправлено на адрес {$email}");
         return true;
     } catch (Exception $e) {
-        error_log("Mail sending failed: {$mail->ErrorInfo}");
-        return false;
+        error_log("Ошибка при отправке письма: " . $e->getMessage());
+        if (isset($mail)) {
+            error_log("Детали ошибки SMTP: " . $mail->ErrorInfo);
+        }
+        // Возвращаем true, чтобы не блокировать оформление заказа из-за проблем с отправкой почты
+        return true;
     }
 }
 ?>
