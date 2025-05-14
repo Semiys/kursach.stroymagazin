@@ -363,9 +363,9 @@ if ($discount > 0) {
                             <div class="d-flex align-items-center">
                                 <span class="me-3">Количество:</span>
                                 <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 150px;">
-                                    <button type="button" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="decrease_quantity">-</button>
+                                    <button type="button" class="btn btn-outline-warning btn-lg cart-action-btn" data-action="decrease_quantity">-</button>
                                     <input type="number" class="form-control form-control-lg text-center product-quantity-input" value="<?php echo $product_in_cart_quantity_product_page; ?>" min="0" max="<?php echo $product_stock_quantity_prod_page; ?>" data-action="update_quantity">
-                                    <button type="button" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="add_to_cart">+</button>
+                                    <button type="button" class="btn btn-outline-warning btn-lg cart-action-btn" data-action="add_to_cart">+</button>
                                 </div>
                             </div>
                         <?php else: ?>

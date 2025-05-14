@@ -224,7 +224,7 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                     <div class="col-md-3 col-sm-6 mt-2 mt-md-0">
                                         <div class="cart-controls" data-product-id="<?php echo $item['id']; ?>" data-stock="<?php echo $item['stock_quantity']; ?>">
                                             <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 140px;">
-                                                <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="decrease_quantity" data-product-id="<?php echo $item['id']; ?>">-</button>
+                                                <button type="button" class="btn btn-outline-warning btn-sm cart-action-btn" data-action="decrease_quantity" data-product-id="<?php echo $item['id']; ?>">-</button>
                                                 <input type="number" class="form-control form-control-sm text-center product-quantity-input" 
                                                        value="<?php echo $item['quantity_in_cart']; ?>" 
                                                        min="0" max="<?php echo $item['stock_quantity']; ?>" 
@@ -233,7 +233,7 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                                        id="quantity-<?php echo $item['id']; ?>"
                                                        autocomplete="off"
                                                        aria-label="Количество">
-                                                <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'disabled'; ?>" 
+                                                <button type="button" class="btn btn-outline-warning btn-sm cart-action-btn <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'disabled'; ?>" 
                                                    data-action="add_to_cart"
                                                    data-product-id="<?php echo $item['id']; ?>"
                                                    <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'aria-disabled="true"'; ?>>+</button>
@@ -318,7 +318,7 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                        placeholder="Введите сюда промо-слово" 
                                        autocomplete="off"
                                        <?php if ($cart_is_empty) echo 'disabled'; ?>>
-                                <button class="btn btn-outline-secondary" type="submit" <?php if ($cart_is_empty) echo 'disabled'; ?>>Применить</button>
+                                <button class="btn btn-outline-warning" type="submit" <?php if ($cart_is_empty) echo 'disabled'; ?>>Применить</button>
                             </div>
                         </form>
                         <div id="promo-message">

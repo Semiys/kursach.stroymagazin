@@ -342,9 +342,9 @@ function updateCartUI(productId, newQuantity, stockQuantity) {
                 const controlHtml = `
                     ${isProductPage ? '<span class="me-3">Количество:</span>' : ''}
                     <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: ${isProductPage ? '180px' : '185px'}; ${!isProductPage ? 'margin-left: auto; margin-right: auto;' : ''}">
-                        <button type="button" class="btn btn-outline-secondary ${btnSizeClass} cart-action-btn" data-action="decrease_quantity" data-product-id="${productId}">-</button>
+                        <button type="button" class="btn btn-outline-warning ${btnSizeClass} cart-action-btn" data-action="decrease_quantity" data-product-id="${productId}">-</button>
                         <input type="number" class="form-control ${inputSizeClass} text-center product-quantity-input" value="${newQuantity}" min="1" max="${stockQuantity}" data-action="update_quantity">
-                        <button type="button" class="btn btn-outline-secondary ${btnSizeClass} cart-action-btn ${plusDisabledClass}" data-action="add_to_cart" data-product-id="${productId}">+</button>
+                        <button type="button" class="btn btn-outline-warning ${btnSizeClass} cart-action-btn ${plusDisabledClass}" data-action="add_to_cart" data-product-id="${productId}">+</button>
                     </div>
                 `;
                 
