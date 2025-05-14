@@ -159,7 +159,7 @@ $shipping_cost = $cart_is_empty ? 0 : 10.00; // Пример: доставка 1
 $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0; // Скидка по промокоду
 $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
 ?>
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -169,10 +169,10 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
     <link rel="stylesheet" href="../template/css/main.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 
 <body>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <?php echo $flash_message_html; // Выводим flash сообщение здесь ?>
     <div class="container py-5">
         <h4 class="mb-4">Корзина</h4>
@@ -223,20 +223,20 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                             </div>
                                     <div class="col-md-3 col-sm-6 mt-2 mt-md-0">
                                         <div class="cart-controls" data-product-id="<?php echo $item['id']; ?>" data-stock="<?php echo $item['stock_quantity']; ?>">
-                                            <?php // Контролы количества будут добавлены сюда позже, когда будем подключать JS для них
-                                                  // Пока что просто выводим текущее количество
-                                            ?>
                                             <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 140px;">
-                                                <a href="#" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="decrease_quantity">-</a>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="decrease_quantity" data-product-id="<?php echo $item['id']; ?>">-</button>
                                                 <input type="number" class="form-control form-control-sm text-center product-quantity-input" 
                                                        value="<?php echo $item['quantity_in_cart']; ?>" 
-                                                       min="0" <?php // min="0" чтобы можно было удалить через ввод 0, но JS должен это обработать для remove_from_cart ?>
-                                                       max="<?php echo $item['stock_quantity']; ?>" 
+                                                       min="0" max="<?php echo $item['stock_quantity']; ?>" 
                                                        data-action="update_quantity" 
+                                                       name="quantity-<?php echo $item['id']; ?>"
+                                                       id="quantity-<?php echo $item['id']; ?>"
+                                                       autocomplete="off"
                                                        aria-label="Количество">
-                                                <a href="#" class="btn btn-outline-secondary btn-sm cart-action-btn <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'disabled'; ?>" 
+                                                <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'disabled'; ?>" 
                                                    data-action="add_to_cart"
-                                                   <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'aria-disabled="true"'; ?>>+</a>
+                                                   data-product-id="<?php echo $item['id']; ?>"
+                                                   <?php if ($item['quantity_in_cart'] >= $item['stock_quantity']) echo 'aria-disabled="true"'; ?>>+</button>
                             </div>
                                 </div>
                             </div>
@@ -271,9 +271,9 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                         <i class="bi bi-arrow-left me-2"></i>Продолжить покупки
                     </a>
                     <?php if (!$cart_is_empty): ?>
-                    <a href="#" id="clear-cart-btn" class="btn btn-outline-danger ms-2">
+                    <button id="clear-cart-btn" class="btn btn-outline-danger ms-2">
                         <i class="bi bi-trash me-2"></i>Очистить корзину
-                    </a>
+                    </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -314,7 +314,10 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                         <h5 class="card-title mb-3">Активировать промокод</h5>
                         <form id="promo-form" action="apply_promo.php" method="POST" class="mb-3">
                             <div class="input-group">
-                                <input type="text" name="promo_code" class="form-control" placeholder="Введите сюда промо-слово" <?php if ($cart_is_empty) echo 'disabled'; ?>>
+                                <input type="text" name="promo_code" id="promo_code" class="form-control" 
+                                       placeholder="Введите сюда промо-слово" 
+                                       autocomplete="off"
+                                       <?php if ($cart_is_empty) echo 'disabled'; ?>>
                                 <button class="btn btn-outline-secondary" type="submit" <?php if ($cart_is_empty) echo 'disabled'; ?>>Применить</button>
                             </div>
                         </form>
@@ -335,100 +338,15 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
         </div>
     </div>
     <?php include_once "../template/footer.php" ?>
-    <!-- Скрипты Bootstrap и Popper.js уже были в вашем исходном файле, оставляем их -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
         integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
         crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js"
         integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+"
         crossorigin="anonymous"></script>
-    <!-- Добавляем прямые обработчики для кнопок удаления -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Функция для отображения уведомлений в стиле Bootstrap
-            function showNotification(message, type = 'info', duration = 3000) {
-                // Создаем контейнер для уведомлений, если его еще нет
-                let notifContainer = document.getElementById('global-notifications');
-                if (!notifContainer) {
-                    notifContainer = document.createElement('div');
-                    notifContainer.id = 'global-notifications';
-                    notifContainer.className = 'position-fixed top-0 end-0 p-3';
-                    notifContainer.style.zIndex = '1050';
-                    document.body.appendChild(notifContainer);
-                }
-
-                // Создаем само уведомление
-                const notification = document.createElement('div');
-                notification.className = `toast alert alert-${type} show`;
-                notification.role = 'alert';
-                notification.ariaLive = 'assertive';
-                notification.ariaAtomic = 'true';
-                
-                notification.innerHTML = `
-                    <div class="toast-header">
-                        <strong class="me-auto">Уведомление</strong>
-                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                `;
-
-                notifContainer.appendChild(notification);
-
-                // Устанавливаем обработчик закрытия
-                const closeBtn = notification.querySelector('.btn-close');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => {
-                        notification.remove();
-                    });
-                }
-
-                // Автоматически удаляем уведомление через указанное время
-                setTimeout(() => {
-                    notification.remove();
-                }, duration);
-            }
-
-            // Находим все кнопки удаления товаров в корзине
-            const deleteButtons = document.querySelectorAll('.btn[data-action="remove_from_cart"]');
-            
-            deleteButtons.forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const productId = this.dataset.productId;
-                    if (productId) {
-                        // Показываем уведомление
-                        showNotification('Удаление товара из корзины...', 'info');
-                        
-                        // Формируем URL для удаления товара
-                        const ajaxUrl = `/main/cart.php?action=remove_from_cart&id_to_cart=${productId}&ajax=1`;
-                        
-                        // Отправляем запрос
-                        fetch(ajaxUrl)
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    // Показываем уведомление об успешном удалении
-                                    showNotification('Товар удален из корзины', 'success');
-                                    // Задержка для отображения уведомления
-                                    setTimeout(() => {
-                                        // Перезагружаем страницу, чтобы обновить корзину
-                                        window.location.reload();
-                                    }, 500);
-                                } else {
-                                    showNotification('Ошибка удаления товара: ' + data.message, 'danger');
-                                }
-                            })
-                            .catch(error => {
-                                showNotification('Ошибка сети при удалении товара', 'danger');
-                                console.error(error);
-                            });
-                    }
-                });
-            });
-        });
-    </script>
+    
+    <!-- Подключаем скрипт для работы с корзиной -->
+    <script src="/template/js/cart_ajax.js"></script>
 </body>
 
 </html>

@@ -1,57 +1,61 @@
 <?php
 session_start(); // Запускаем сессию, если она еще не запущена
 ?>
-<nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/index.php">СтройМаркет</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--orange-primary);">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            <i class="bi bi-building me-2" style="color: white;"></i>
+            <span style="color: black; font-weight: 600;">СтройМаркет</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon" style="color:white;"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="/index.php">Главная</a>
+                    <a class="nav-link" href="/" style="color: black; font-weight: 500;">Главная</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="/main/catalogue.php">Каталог</a>
+                    <a class="nav-link" href="/main/catalogue.php" style="color: black; font-weight: 500;">Каталог</a>
                 </li>
-                <?php if (isset($_SESSION['user_id'])): ?>
-                <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="/main/cart.php">
-                        Корзина 
-                        <?php 
-                            // Отображаем общее количество товаров в корзине (сумма всех quantity)
-                            $total_quantity_in_header = 0;
-                            if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
-                                $total_quantity_in_header = array_sum($_SESSION['cart']);
-                            }
-                            $badge_class = ($total_quantity_in_header > 0) ? '' : ' d-none'; // Добавляем d-none если пусто
-                        ?>
-                        <span class="badge bg-primary rounded-pill cart-total-quantity-badge<?php echo $badge_class; ?>">
-                            <?php 
-                                echo $total_quantity_in_header > 0 ? $total_quantity_in_header : ''; 
-                            ?>
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                        <a class="nav-link" aria-current="page" href="/main/profile.php">Мой профиль (<?php echo htmlspecialchars($_SESSION['user_email']); ?>)</a>
-                </li>
-                    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): // Пример проверки на админа ?>
-                <li class="nav-item">
-                            <a class="nav-link link-danger" aria-current="page" href="/admin/dashboard.php">Панель управления</a>
-                </li>
-                    <?php endif; ?>
-                <?php endif; ?>
             </ul>
-            <div class="d-flex">
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <a href="/main/logout.php" class="btn btn-outline-danger">Выйти</a>
+            <div class="d-flex align-items-center">
+                <?php if (isset($_SESSION['user_id'])):
+                    // Если пользователь авторизован, показываем кнопку Профиль
+                    // (Предполагается, что если есть user_id, то есть и user_login)
+                    $user_login = isset($_SESSION['user_login']) ? $_SESSION['user_login'] : 'Пользователь';
+                    ?>
+                    <a href="/main/profile.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
+                        <i class="bi bi-person-fill me-1"></i>Профиль
+                    </a>
                 <?php else: ?>
-                    <a href="/main/login.php" class="btn btn-outline-success me-2">Вход</a>
-                    <a href="/main/register.php" class="btn btn-outline-primary">Регистрация</a>
+                    <a href="/main/login.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Войти
+                    </a>
+                    <a href="/main/register.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
+                        <i class="bi bi-person-plus-fill me-1"></i>Регистрация
+                    </a>
                 <?php endif; ?>
+                <a href="/main/cart.php" class="btn position-relative" style="background-color: var(--dark-gray); color: white;">
+                    <i class="bi bi-cart3 me-1"></i>Корзина
+                    <?php
+                    // Отображаем количество товаров в корзине
+                    $cartCount = 0;
+                    if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
+                        foreach ($_SESSION['cart'] as $quantity) {
+                            $cartCount += $quantity;
+                        }
+                    }
+                    // Добавляем класс cart-total-quantity-badge и d-none если корзина пуста
+                    $badge_d_none_class = ($cartCount > 0) ? '' : ' d-none';
+                    echo '<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill cart-total-quantity-badge' . $badge_d_none_class . '" style="background-color: var(--complement-green);">';
+                    if ($cartCount > 0) {
+                        echo $cartCount;
+                    }
+                    echo '</span>';
+                    ?>
+                </a>
             </div>
         </div>
     </div>

@@ -128,20 +128,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
+    <title>Регистрация - СтройМаркет</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
-    <link rel="stylesheet" href="template/css/main.css">
+    <link rel="stylesheet" href="../template/css/main.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 
-<body class="d-flex justify-content-center align-items-center vh-100 bg-light">
+<body>
+    <?php include_once "../template/header.php"; ?>
 
-    <div class="container">
+    <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card shadow-lg">
-                    <div class="card-body">
-                        <h2 class="text-center mb-4">Регистрация</h2>
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-lg" style="background-color: var(--card-bg); border-radius: 12px;">
+                    <div class="card-body p-4 p-md-5">
+                        <h2 class="text-center mb-4 fw-bold" style="color: var(--dark-gray);">Создать аккаунт</h2>
                         <?php if (!empty($error_message)): ?>
                             <div class="alert alert-danger" role="alert">
                                 <?php echo $error_message; ?>
@@ -174,16 +176,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <input type="password" name="confirm_password" id="confirm_password"
                                     class="form-control" required="">
                             </div>
-                            <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button>
+                            <button type="submit" class="btn btn-primary w-100 btn-lg">Зарегистрироваться</button>
                         </form>
-                        <div class="text-center mt-3">
-                            <a href="login.php" class="btn btn-outline-secondary w-100">Уже есть аккаунт? Войти</a>
+                        <div class="text-center mt-4">
+                            <p class="mb-0" style="color: var(--medium-gray);">Уже есть аккаунт? 
+                                <a href="login.php" class="fw-bold" style="color: var(--orange-primary);">Войти</a>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <?php include_once "../template/footer.php"; ?>
+
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
         integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
         crossorigin="anonymous"></script>

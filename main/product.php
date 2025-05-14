@@ -363,15 +363,15 @@ if ($discount > 0) {
                             <div class="d-flex align-items-center">
                                 <span class="me-3">Количество:</span>
                                 <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 150px;">
-                                    <a href="#" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="decrease_quantity">-</a>
+                                    <button type="button" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="decrease_quantity">-</button>
                                     <input type="number" class="form-control form-control-lg text-center product-quantity-input" value="<?php echo $product_in_cart_quantity_product_page; ?>" min="0" max="<?php echo $product_stock_quantity_prod_page; ?>" data-action="update_quantity">
-                                    <a href="#" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="add_to_cart">+</a>
+                                    <button type="button" class="btn btn-outline-secondary btn-lg cart-action-btn" data-action="add_to_cart">+</button>
                                 </div>
                             </div>
                         <?php else: ?>
-                            <a href="#" class="btn btn-primary btn-lg cart-action-btn" data-action="add_to_cart">
+                            <button type="button" class="btn btn-primary btn-lg cart-action-btn" data-action="add_to_cart">
                     <i class="bi bi-cart-plus"></i> Добавить в корзину
-                            </a>
+                            </button>
                         <?php endif; ?>
                     <?php else: // Товара нет на складе ?>
                          <button class="btn btn-secondary btn-lg" disabled><i class="bi bi-cart-x"></i> Нет в наличии</button>
@@ -582,6 +582,9 @@ if ($discount > 0) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js"
         integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+"
         crossorigin="anonymous"></script>
+    
+    <!-- Добавляем скрипт для работы с корзиной -->
+    <script src="/template/js/cart_ajax.js"></script>
 </body>
 
 </html>

@@ -569,14 +569,14 @@ try {
                                                 <?php if ($product_stock_quantity > 0): ?>
                                                     <?php if ($product_in_cart_quantity > 0): ?>
                                                         <div class="input-group quantity-control-group ajax-quantity-control" style="max-width: 160px; margin-left: auto; margin-right: auto;">
-                                                            <a href="#" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="decrease_quantity">-</a>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="decrease_quantity">-</button>
                                                             <input type="number" class="form-control form-control-sm text-center product-quantity-input" value="<?php echo $product_in_cart_quantity; ?>" min="0" max="<?php echo $product_stock_quantity; ?>" data-action="update_quantity">
-                                                            <a href="#" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="add_to_cart">+</a>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm cart-action-btn" data-action="add_to_cart">+</button>
                                                         </div>
                                                     <?php else: ?>
-                                                        <a href="#" class="btn btn-primary w-100 cart-action-btn" data-action="add_to_cart" title="Добавить в корзину">
+                                                        <button type="button" class="btn btn-primary w-100 cart-action-btn" data-action="add_to_cart" title="Добавить в корзину">
                                                             В корзину
-                                                        </a>
+                                                        </button>
                                                     <?php endif; ?>
                                                 <?php else: // Товара нет на складе ?>
                                                     <button class="btn btn-secondary w-100" disabled>Нет в наличии</button>
@@ -617,6 +617,9 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js"
         integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+"
         crossorigin="anonymous"></script>
+
+    <!-- Добавляем скрипт для работы с корзиной -->
+    <script src="/template/js/cart_ajax.js"></script>
 
 </body>
 

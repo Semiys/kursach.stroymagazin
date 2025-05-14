@@ -21,6 +21,10 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.min.js"
     integrity="sha384-VQqxDN0EQCkWoxt/0vsQvZswzTHUVOImccYmSyhJTp7kGtPed0Qcx8rK9h9YEgx+"
     crossorigin="anonymous"></script>
+  
+  <!-- Подключаем скрипты корзины в правильном порядке -->
+  <script src="/template/js/cart_ajax.js"></script>
+  <script src="/template/js/cart_main.js"></script>
 </body>
 
 </html>

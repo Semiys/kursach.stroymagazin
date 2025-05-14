@@ -11,33 +11,38 @@ footer {
 }
 
 body {
-  background-color: #f8f9fa;
+  background-color: var(--global-bg) !important; /* Глобальный фон */
+  color: var(--dark-gray); /* Основной цвет текста */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Более современный шрифт */
 }
 
 .filter-sidebar {
-  background: white;
+  background: white !important; /* Фильтры на белом фоне для контраста */
   border-radius: 12px;
   position: sticky;
   top: 20px;
   height: fit-content;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
 }
 
-.product-card {
-  background: white;
-  border-radius: 12px;
+.product-card,
+.card {
+  background: white !important; /* Карточки товаров и другие .card элементы на белом фоне */
+  border-radius: 12px !important;
   transition: all 0.3s ease-in-out;
-  height: 100%;
-  border: 1px solid #e0e0e0;
+  /* border: 1px solid #e0e0e0; - убрали, т.к. есть box-shadow */
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
 }
 
+.card:hover,
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06);
-  border-color: #d0d0d0;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(255, 122, 0, 0.2) !important; /* Более выраженная оранжевая тень при наведении */
+  /* border-color: #d0d0d0; */
 }
 
 .product-card .product-image-wrapper {
@@ -96,9 +101,9 @@ body {
 }
 
 .product-card .price {
+  color: var(--orange-primary) !important;
   font-size: 1.4rem;
   font-weight: 600;
-  color: #2563eb !important;
   margin-bottom: 0.75rem;
 }
 
@@ -116,15 +121,20 @@ body {
 }
 
 .price {
-  color: #2563eb;
+  color: var(--orange-primary) !important;
   font-weight: 600;
 }
 
 .discount-badge {
+  background-color: var(--orange-primary) !important;
+  color: white !important;
+  font-weight: bold;
   top: 10px;
   right: 10px;
   padding: 4px 8px;
   border-radius: 6px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
 }
 
 .wishlist-btn {
@@ -195,14 +205,15 @@ body {
 }
 
 .cart-btn {
-  background: #2563eb;
-  color: white;
-  border: none;
+  background: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+  color: white !important;
   transition: all 0.2s;
 }
 
 .cart-btn:hover {
-  background: #1d4ed8;
+  background: var(--orange-dark) !important;
+  border-color: var(--orange-dark) !important;
   transform: translateY(-2px);
 }
 
@@ -311,4 +322,463 @@ body {
   .carousel-inner .carousel-item img {
     height: 300px;
   }
+}
+
+/* Новая цветовая схема для строительного магазина */
+:root {
+  --orange-primary: #ff7a00;        /* Основной оранжевый цвет */
+  --orange-dark: #e65c00;           /* Темно-оранжевый для ховера */
+  --orange-light: #ffa64d;          /* Светло-оранжевый для легких элементов */
+  --orange-very-light: #fff1e6;     /* Очень светлый оранжевый (для контента) */
+  --dark-gray: #333333;             /* Темно-серый для текста */
+  --medium-gray: #666666;           /* Средне-серый для вторичных текстов */
+  --light-gray: #f8f8f8;            /* Светло-серый (будет заменен) */
+  --complement-green: #007a5c;      /* Комплементарный зеленый цвет */
+  --complement-green-light: #00aa80; /* Светло-зеленый */
+
+  /* НОВЫЕ ФОНОВЫЕ ЦВЕТА */
+  --global-bg: #fff5e1; /* Более насыщенный теплый светло-оранжевый/персиковый для body */
+  --content-bg: #fffaf0; /* FloralWhite, очень светлый теплый для основных контейнеров контента */
+  --card-bg: #fffdfa;    /* Snow, почти белый, но теплее, для карточек, модалок, таблиц */
+}
+
+/* Общие стили кнопок для улучшения видимости */
+.btn {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s ease-in-out;
+  font-weight: 500; /* Делаем текст кнопок жирнее */
+}
+
+.btn:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  transform: translateY(1px);
+}
+
+/* Основная оранжевая кнопка */
+.btn-primary, 
+.btn.btn-primary {
+  background-color: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+  color: white !important;
+}
+
+.btn-primary:hover, 
+.btn-primary:focus, 
+.btn-primary:active, 
+.btn-primary.active {
+  background-color: var(--orange-dark) !important;
+  border-color: var(--orange-dark) !important;
+  color: white !important;
+}
+
+/* Контурная оранжевая кнопка */
+.btn-outline-primary {
+  color: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+  background-color: transparent !important;
+}
+
+.btn-outline-primary:hover, 
+.btn-outline-primary:focus, 
+.btn-outline-primary:active {
+  background-color: var(--orange-primary) !important;
+  color: white !important;
+  border-color: var(--orange-primary) !important;
+}
+
+/* Зеленая кнопка (например, для успеха) */
+.btn-success {
+  background-color: var(--complement-green) !important;
+  border-color: var(--complement-green) !important;
+  color: white !important;
+}
+
+.btn-success:hover, 
+.btn-success:focus, 
+.btn-success:active {
+  background-color: var(--complement-green-light) !important;
+  border-color: var(--complement-green-light) !important;
+  color: white !important;
+}
+
+/* Светло-оранжевая кнопка (для информации) */
+.btn-info {
+  background-color: var(--orange-light) !important;
+  border-color: var(--orange-light) !important;
+  color: var(--dark-gray) !important; /* Темный текст для контраста на светлой кнопке */
+}
+
+.btn-info:hover, 
+.btn-info:focus, 
+.btn-info:active {
+  background-color: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+  color: white !important;
+}
+
+/* Кнопки в карточке товара */
+.add-to-cart {
+  background-color: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+  color: white !important;
+  padding: 0.375rem 0.75rem; /* Стандартные размеры для btn-sm */
+  font-size: 0.875rem; /* Стандартные размеры для btn-sm */
+}
+
+.add-to-cart:hover {
+  background-color: var(--orange-dark) !important;
+  border-color: var(--orange-dark) !important;
+}
+
+/* Переопределение навигации */
+.navbar-dark {
+  background-color: var(--dark-gray) !important;
+}
+
+/* Акцентные цвета */
+.text-primary {
+  color: var(--orange-primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--orange-primary) !important;
+}
+
+.bg-light {
+  background-color: var(--light-gray) !important;
+}
+
+/* Карточки товаров */
+.card {
+  border-color: #e0e0e0;
+}
+
+.card:hover {
+  box-shadow: 0 5px 15px rgba(255, 122, 0, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+.card-header-custom {
+  background-color: var(--orange-very-light);
+  border-bottom: 1px solid var(--orange-light);
+}
+
+/* Оформление таблиц */
+.table-dark {
+  background-color: var(--dark-gray) !important;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--orange-primary) !important;
+  border-color: var(--orange-primary) !important;
+}
+
+.pagination .page-link {
+  color: var(--orange-primary) !important;
+}
+
+.pagination .page-link:hover {
+  color: var(--orange-dark) !important;
+}
+
+/* Значки скидок и акций */
+.badge-discount {
+  display: inline-block;
+  padding: 0.4em 0.65em;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* Модальные окна */
+.modal-header {
+  background-color: var(--orange-primary) !important; /* Оранжевая шапка модального окна */
+  color: white !important;
+  border-bottom-color: var(--orange-dark) !important;
+  border-top-left-radius: 10px !important; /* Скругление углов */
+  border-top-right-radius: 10px !important;
+}
+
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%); /* Делаем крестик белым */
+}
+
+.modal-body {
+    background-color: var(--card-bg) !important; /* Тело модалки тоже теплое */
+    padding: 20px;
+}
+
+.modal-footer {
+    background-color: var(--content-bg) !important; /* Футер модалки как фон контента */
+    border-top: 1px solid #f0e0d0 !important;
+    border-bottom-left-radius: 10px !important;
+    border-bottom-right-radius: 10px !important;
+}
+
+/* Ссылки */
+a {
+  color: var(--orange-primary);
+}
+
+a:hover {
+  color: var(--orange-dark);
+}
+
+/* Заголовки категорий и разделов */
+.section-heading {
+  color: var(--dark-gray);
+  border-bottom: 3px solid var(--orange-primary);
+  padding-bottom: 10px;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+
+/* Алерты */
+.alert-success {
+  background-color: rgba(0, 122, 92, 0.15) !important;
+  border-color: var(--complement-green) !important;
+  color: var(--complement-green) !important;
+}
+
+.alert-primary {
+  background-color: var(--orange-very-light) !important;
+  border-color: var(--orange-light) !important;
+  color: var(--orange-dark) !important;
+}
+
+/* Хлебные крошки */
+.breadcrumb {
+  background-color: white !important; /* Белый фон для хлебных крошек */
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.breadcrumb-item a {
+  color: var(--orange-primary) !important;
+}
+
+.breadcrumb-item.active {
+  color: var(--dark-gray) !important; /* Активный элемент темнее */
+}
+
+/* Footers */
+footer {
+  background-color: var(--dark-gray);
+  color: white;
+}
+
+footer a {
+  color: var(--orange-light);
+}
+
+footer a:hover {
+  color: var(--orange-primary);
+}
+
+/* Заголовки товаров */
+.product-title {
+  color: var(--dark-gray);
+  font-weight: 600;
+}
+
+/* Цены товаров */
+.product-price {
+  color: var(--orange-primary);
+  font-weight: bold;
+}
+
+.product-discount-price {
+  color: var(--orange-primary);
+  font-weight: bold;
+}
+
+.product-original-price {
+  text-decoration: line-through;
+  color: var(--medium-gray);
+}
+
+/* Анимации и эффекты для кнопок и бейджей */
+.btn-primary, .btn-success, .btn-info {
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover, .btn-success:hover, .btn-info:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.badge-discount {
+  background-color: var(--orange-primary) !important;
+  color: white !important;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Улучшенный эффект наведения для карточек */
+.card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(255, 122, 0, 0.15);
+}
+
+/* Стилизация элементов корзины */
+.cart-item {
+  transition: background-color 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.cart-item:hover {
+  background-color: var(--orange-very-light);
+  border-left: 4px solid var(--orange-primary);
+}
+
+/* Улучшение навигации */
+.nav-link {
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.nav-link:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: var(--orange-primary);
+  transition: width 0.3s ease;
+}
+
+.nav-link:hover:after {
+  width: 100%;
+}
+
+/* Стили для профиля пользователя */
+.card_profile {
+  border-radius: 10px;
+  overflow: hidden;
+  border-top: 4px solid var(--orange-primary);
+}
+
+/* Стили для таблицы истории заказов */
+.table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: var(--content-bg) !important; /* Для чересполосицы в таблицах */
+}
+
+.table-hover > tbody > tr:hover {
+  background-color: rgba(255, 122, 0, 0.05);
+}
+
+/* Стили для основного контента страниц, чтобы он был на светлом фоне, отделенном от body */
+main.container,
+.container-fluid,
+.container,
+.py-5 { /* класс для страниц типа checkout */
+  background-color: var(--content-bg) !important;
+  padding-top: 25px;
+  padding-bottom: 25px;
+  border-radius: 10px;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.05);
+  margin-top: 20px; /* Добавим отступ сверху для контейнеров */
+  margin-bottom: 20px; /* И снизу */
+}
+
+/* Для страниц, где нет основного контейнера, но есть .py-5, например, оформление заказа */
+.py-5 {
+    background-color: var(--light-gray); /* Также делаем фон светло-серым */
+    border-radius: 8px;
+}
+
+/* Убираем фон у .card_profile, чтобы он наследовал фон от .card */
+.card_profile .card-body {
+    /* background-color: transparent !important; */
+}
+
+/* Карусель */
+.carousel {
+    border-radius: 8px; /* Скругляем углы карусели */
+    overflow: hidden; /* Чтобы скругление сработало */
+    margin-bottom: 30px; /* Отступ снизу */
+}
+
+/* Таблицы */
+.table {
+    background-color: white; /* Таблицы на белом фоне */
+    border-radius: 8px;
+    overflow: hidden; /* Для скругления углов */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.table thead th {
+    background-color: var(--content-bg) !important;
+    color: var(--dark-gray) !important;
+    border-bottom-width: 2px !important;
+    border-color: var(--orange-light) !important;
+}
+
+.table-dark thead th {
+    background-color: var(--dark-gray) !important; /* Темные заголовки таблиц */
+    color: white !important;
+}
+
+/* Фильтры в каталоге */
+.filters-column .form-check-input:checked {
+    background-color: var(--orange-primary);
+    border-color: var(--orange-primary);
+}
+
+/* Чтобы убедиться, что радиокнопки тоже перекрашиваются */
+.filters-column .form-check-input[type="radio"]:checked {
+    background-color: var(--orange-primary);
+    border-color: var(--orange-primary);
+}
+
+/* Общие стили для активных чекбоксов и радиокнопок (включая страницу оформления заказа) */
+.form-check-input:checked {
+    background-color: var(--orange-primary);
+    border-color: var(--orange-primary);
+}
+
+/* Стили для карточек товаров */
+.product-card {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(255, 122, 0, 0.15);
 }
