@@ -42,17 +42,17 @@ include_once 'header.php';
                         <i class="bi bi-box-seam-fill me-2"></i>Управление товарами
                         <small class="text-muted d-block">Добавление, редактирование, просмотр товаров</small>
                     </a>
-                    <a href="#" class="list-group-item list-group-item-action disabled-link">
+                    <a href="manage_product_categories_text.php" class="list-group-item list-group-item-action">
                         <i class="bi bi-tags-fill me-2"></i>Управление категориями 
-                        <small class="text-muted d-block">Создание и редактирование категорий товаров (в разработке)</small>
+                        <small class="text-muted d-block">Создание и редактирование категорий товаров</small>
                     </a>
-                    <a href="#" class="list-group-item list-group-item-action disabled-link">
+                    <a href="manage_orders.php" class="list-group-item list-group-item-action">
                         <i class="bi bi-list-check me-2"></i>Управление заказами 
-                        <small class="text-muted d-block">Просмотр и изменение статусов заказов (в разработке)</small>
+                        <small class="text-muted d-block">Просмотр и изменение статусов заказов</small>
                     </a>
-                    <a href="#" class="list-group-item list-group-item-action disabled-link">
+                    <a href="manage_users.php" class="list-group-item list-group-item-action">
                         <i class="bi bi-people-fill me-2"></i>Управление пользователями 
-                        <small class="text-muted d-block">Просмотр информации о пользователях (в разработке)</small>
+                        <small class="text-muted d-block">Просмотр информации о пользователях</small>
                     </a>
                 </div>
             </div>

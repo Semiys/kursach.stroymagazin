@@ -26,12 +26,14 @@ if (isset($_SESSION['flash_message'])) {
 try {
     $stmt = $pdo->query("
         SELECT 
-            category as category_name,
-            COUNT(*) as product_count
-        FROM goods
-        WHERE category IS NOT NULL AND category != ''
-        GROUP BY category
-        ORDER BY category ASC
+            g.category as category_name,
+            COUNT(g.id) as product_count,
+            hc.category_name IS NOT NULL as is_hidden
+        FROM goods g
+        LEFT JOIN hidden_categories hc ON g.category = hc.category_name
+        WHERE g.category IS NOT NULL AND g.category != ''
+        GROUP BY g.category
+        ORDER BY g.category ASC
     ");
     $text_categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -73,14 +75,27 @@ try {
                     <tr>
                         <th>Название категории</th>
                         <th>Кол-во товаров</th>
+                        <th>Статус</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($text_categories as $tc): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($tc['category_name']); ?></td>
+                            <td>
+                                <?php echo htmlspecialchars($tc['category_name']); ?>
+                                <?php if ($tc['is_hidden']): ?>
+                                    <span class="badge bg-secondary ms-2">Скрыта</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($tc['product_count']); ?></td>
+                            <td>
+                                <?php if ($tc['is_hidden']): ?>
+                                    <span class="text-muted">Скрыта от пользователей</span>
+                                <?php else: ?>
+                                    <span class="text-success">Видна всем</span>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <button type="button" class="btn btn-warning btn-sm mb-1 rename-text-category-btn"
                                         data-bs-toggle="modal"
@@ -88,13 +103,17 @@ try {
                                         data-old-category-name="<?php echo htmlspecialchars($tc['category_name']); ?>">
                                     <i class="bi bi-pencil-fill"></i> Переименовать
                                 </button>
-                                <button type="button" class="btn btn-danger btn-sm mb-1 delete-text-category-btn"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#deleteTextCategoryModal"
-                                        data-category-name-to-delete="<?php echo htmlspecialchars($tc['category_name']); ?>"
-                                        data-product-count="<?php echo $tc['product_count']; ?>">
-                                    <i class="bi bi-trash-fill"></i> "Удалить" (очистить у товаров)
-                                </button>
+                                <?php if ($tc['is_hidden']): ?>
+                                    <button type="button" class="btn btn-success btn-sm mb-1 show-text-category-btn"
+                                            data-category-name-to-show="<?php echo htmlspecialchars($tc['category_name']); ?>">
+                                        <i class="bi bi-eye-fill"></i> Показать для всех
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-secondary btn-sm mb-1 hide-text-category-btn"
+                                            data-category-name-to-hide="<?php echo htmlspecialchars($tc['category_name']); ?>">
+                                        <i class="bi bi-eye-slash-fill"></i> Скрыть от пользователей
+                                    </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -160,23 +179,20 @@ try {
     </div>
 </div>
 
-<!-- Модальное окно: "Удалить" категорию -->
-<div class="modal fade" id="deleteTextCategoryModal" tabindex="-1" aria-labelledby="deleteTextCategoryModalLabel" aria-hidden="true">
+<!-- Модальное окно: Подтверждение действия Скрыть/Показать -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteTextCategoryModalLabel">"Удалить" название категории</h5>
+                <h5 class="modal-title" id="confirmActionModalLabel">Подтвердите действие</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Вы уверены, что хотите "удалить" название категории "<strong id="deleteTextCategoryNameDisplay"></strong>"?</p>
-                <p>Это действие установит поле 'category' в <strong>NULL (пусто)</strong> для <strong id="deleteTextCategoryProductCount"></strong> товаров, использующих это название.</p>
-                <input type="hidden" id="categoryNameToDeleteHidden" name="category_name_to_delete">
-                <div id="deleteTextCategoryError" class="text-danger mt-2"></div>
+                <p id="confirmActionModalText"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteTextCategoryBtn">Да, очистить у товаров</button>
+                <button type="button" class="btn btn-primary" id="confirmActionModalButton">Подтвердить</button>
             </div>
         </div>
     </div>
@@ -338,57 +354,105 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- "DELETE" CATEGORY NAME (set to NULL for products) --- //
-    const deleteTextCategoryModalElement = document.getElementById('deleteTextCategoryModal');
-    const deleteTextCategoryModal = new bootstrap.Modal(deleteTextCategoryModalElement);
-    const confirmDeleteTextCategoryBtn = document.getElementById('confirmDeleteTextCategoryBtn');
-    const categoryNameToDeleteHiddenInput = document.getElementById('categoryNameToDeleteHidden');
-    const deleteTextCategoryNameDisplay = document.getElementById('deleteTextCategoryNameDisplay');
-    const deleteTextCategoryProductCount = document.getElementById('deleteTextCategoryProductCount');
-    const deleteTextCategoryErrorDiv = document.getElementById('deleteTextCategoryError');
-    
-    document.querySelectorAll('.delete-text-category-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const categoryName = this.dataset.categoryNameToDelete;
-            const productCount = this.dataset.productCount;
+    // --- HIDE/SHOW CATEGORY (using a single confirmation modal) --- //
+    const confirmActionModalElement = document.getElementById('confirmActionModal');
+    const confirmActionModal = new bootstrap.Modal(confirmActionModalElement);
+    const confirmActionModalText = document.getElementById('confirmActionModalText');
+    const confirmActionModalButton = document.getElementById('confirmActionModalButton');
+    let currentCategoryNameForAction = null;
+    let currentActionType = null; // 'hide' or 'show'
+    let currentButtonElement = null; // Store the button that was clicked
 
-            categoryNameToDeleteHiddenInput.value = categoryName;
-            deleteTextCategoryNameDisplay.textContent = categoryName;
-            deleteTextCategoryProductCount.textContent = productCount;
-            deleteTextCategoryErrorDiv.textContent = '';
+    document.querySelectorAll('.hide-text-category-btn, .show-text-category-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            currentButtonElement = this; // Store the clicked button
+            currentCategoryNameForAction = this.dataset.categoryNameToHide || this.dataset.categoryNameToShow;
+            currentActionType = this.dataset.categoryNameToHide ? 'hide' : 'show';
+            
+            if (currentActionType === 'hide') {
+                confirmActionModalText.textContent = `Вы уверены, что хотите скрыть категорию "${currentCategoryNameForAction}" от пользователей? Товары этой категории останутся, но категория не будет видна в фильтрах и на карточках товаров.`;
+                confirmActionModalButton.className = 'btn btn-danger'; // Or btn-warning
+                confirmActionModalButton.textContent = 'Да, скрыть';
+            } else {
+                confirmActionModalText.textContent = `Вы уверены, что хотите снова показать категорию "${currentCategoryNameForAction}" для всех пользователей?`;
+                confirmActionModalButton.className = 'btn btn-success';
+                confirmActionModalButton.textContent = 'Да, показать';
+            }
+            confirmActionModal.show();
         });
     });
 
-    confirmDeleteTextCategoryBtn.addEventListener('click', function() {
-        const categoryNameToDelete = categoryNameToDeleteHiddenInput.value;
-        deleteTextCategoryErrorDiv.textContent = '';
+    confirmActionModalButton.addEventListener('click', function() {
+        if (!currentCategoryNameForAction || !currentActionType || !currentButtonElement) return;
+
+        const originalConfirmButtonText = this.textContent; // Store original text
         this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Удаление...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Выполнение...';
 
-        const formData = new FormData();
-        formData.append('category_name_to_delete', categoryNameToDelete);
+        const actionUrl = currentActionType === 'hide' ? 'ajax_hide_category.php' : 'ajax_show_category.php';
+        const params = new URLSearchParams();
+        params.append('category_name', currentCategoryNameForAction);
 
-        fetch('ajax_delete_category_in_goods.php', {
+        fetch(actionUrl, {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                deleteTextCategoryModal.hide();
-                showTextCategoryToast(data.message || 'Название категории успешно удалено у товаров!', 'success');
-                setTimeout(() => location.reload(), 1500); 
+                showTextCategoryToast(data.message || 'Действие успешно выполнено.', 'success');
+                
+                // --- DYNAMIC UI UPDATE (from previous correct implementation) ---
+                const row = currentButtonElement.closest('tr');
+                if (row) {
+                    const statusCell = row.cells[2]; 
+                    const categoryNameCell = row.cells[0]; 
+                    
+                    if (currentActionType === 'hide') {
+                        statusCell.innerHTML = '<span class="text-muted">Скрыта от пользователей</span>';
+                        let badge = categoryNameCell.querySelector('.badge.bg-secondary');
+                        if (!badge) {
+                            categoryNameCell.insertAdjacentHTML('beforeend', ' <span class="badge bg-secondary ms-2">Скрыта</span>');
+                        }
+                        currentButtonElement.innerHTML = '<i class="bi bi-eye-fill"></i> Показать для всех';
+                        currentButtonElement.classList.remove('btn-secondary', 'hide-text-category-btn');
+                        currentButtonElement.classList.add('btn-success', 'show-text-category-btn');
+                        currentButtonElement.dataset.categoryNameToShow = currentCategoryNameForAction;
+                        delete currentButtonElement.dataset.categoryNameToHide;
+                        // currentActionType = 'show'; // Not strictly needed to change here as modal re-evaluates on open
+                    } else { 
+                        statusCell.innerHTML = '<span class="text-success">Видна всем</span>';
+                        let badge = categoryNameCell.querySelector('.badge.bg-secondary');
+                        if (badge) {
+                            badge.remove();
+                        }
+                        currentButtonElement.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Скрыть от пользователей';
+                        currentButtonElement.classList.remove('btn-success', 'show-text-category-btn');
+                        currentButtonElement.classList.add('btn-secondary', 'hide-text-category-btn');
+                        currentButtonElement.dataset.categoryNameToHide = currentCategoryNameForAction;
+                        delete currentButtonElement.dataset.categoryNameToShow;
+                        // currentActionType = 'hide'; // Not strictly needed
+                    }
+                }
+                // Возвращаем фокус на кнопку, которая открыла модальное окно
+                if (currentButtonElement) {
+                    currentButtonElement.focus();
+                }
+                confirmActionModal.hide();
             } else {
-                deleteTextCategoryErrorDiv.textContent = data.error || 'Не удалось удалить название категории у товаров.';
+                showTextCategoryToast(data.message || 'Произошла ошибка при выполнении действия.', 'error');
+                confirmActionModal.hide();
             }
         })
         .catch(error => {
-            console.error('Error deleting category name:', error);
-            deleteTextCategoryErrorDiv.textContent = 'Произошла сетевая ошибка.';
+            showTextCategoryToast('Сетевая ошибка или ошибка сервера: ' + error, 'error');
+            confirmActionModal.hide();
         })
         .finally(() => {
+            // Restore modal button state
             this.disabled = false;
-            this.innerHTML = 'Да, очистить у товаров';
+            this.innerHTML = originalConfirmButtonText;
         });
     });
 
@@ -411,4 +475,5 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <?php
 include_once 'footer.php'; // Предполагается, что footer.php существует и корректно закрывает HTML
+?> 
 ?> 

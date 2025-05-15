@@ -64,7 +64,7 @@ if (isset($_GET['action']) && isset($_GET['id_to_cart'])) {
             } elseif ($action == 'decrease_quantity') {
                 if (isset($_SESSION['cart'][$product_id_action])) {
                     $_SESSION['cart'][$product_id_action]--;
-                    if ($_SESSION['cart'][$product_id_action] <= 0) {
+                    if ($_SESSION['cart'][$product_action] <= 0) {
                         unset($_SESSION['cart'][$product_id_action]);
                         $response_data['message'] = 'Товар удален из корзины.';
                     } else {
@@ -160,14 +160,21 @@ if (isset($_GET['id']) && is_numeric($_GET['id'])) {
     $product_id = (int)$_GET['id'];
 
     try {
-        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images, stock_quantity, discount FROM goods WHERE id = ?");
+        // Включаем is_hidden в запрос
+        $stmt = $pdo->prepare("SELECT id, title, price, img, category, discr, rating, article, short_description, rating_count, gallery_images, stock_quantity, discount, is_hidden FROM goods WHERE id = ?");
         $stmt->execute([$product_id]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        $product_data = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$product) {
+        if (!$product_data) {
             $error_message = 'Товар не найден.';
-            // Можно установить HTTP-код ответа 404
+            $product = null; 
             // header("HTTP/1.0 404 Not Found"); 
+        } elseif ($product_data['is_hidden'] == 1) {
+            $error_message = 'Товар временно недоступен.'; // Или 'Товар не найден.'
+            $product = null; 
+            // header("HTTP/1.0 404 Not Found");
+        } else {
+            $product = $product_data; // Товар найден и не скрыт
         }
     } catch (PDOException $e) {
         error_log("Ошибка загрузки товара: " . $e->getMessage());

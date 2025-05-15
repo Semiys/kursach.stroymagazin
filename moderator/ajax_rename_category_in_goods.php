@@ -47,16 +47,29 @@ try {
 
     $pdo->beginTransaction();
 
-    $stmt_update = $pdo->prepare("UPDATE goods SET category = :new_category_name WHERE category = :old_category_name");
-    $stmt_update->bindParam(':new_category_name', $new_category_name);
-    $stmt_update->bindParam(':old_category_name', $old_category_name);
-    
-    $stmt_update->execute();
-    $affected_rows = $stmt_update->rowCount();
+    // 1. Обновляем категорию в таблице goods
+    $stmt_goods = $pdo->prepare("UPDATE goods SET category = ? WHERE category = ?");
+    $stmt_goods->execute([$new_category_name, $old_category_name]);
+    $affected_goods = $stmt_goods->rowCount();
+
+    // 2. Проверяем, была ли старая категория скрыта
+    $stmt_check_hidden = $pdo->prepare("SELECT COUNT(*) FROM hidden_categories WHERE category_name = ?");
+    $stmt_check_hidden->execute([$old_category_name]);
+    $is_hidden = $stmt_check_hidden->fetchColumn() > 0;
+
+    if ($is_hidden) {
+        // Если старая категория была скрыта, обновляем ее в hidden_categories
+        // Сначала удаляем старую запись (если новое имя отличается), затем вставляем новую, чтобы избежать проблем с уникальностью, если имя не изменилось
+        $stmt_delete_hidden = $pdo->prepare("DELETE FROM hidden_categories WHERE category_name = ?");
+        $stmt_delete_hidden->execute([$old_category_name]);
+        
+        $stmt_insert_hidden = $pdo->prepare("INSERT INTO hidden_categories (category_name) VALUES (?)");
+        $stmt_insert_hidden->execute([$new_category_name]);
+    }
 
     $pdo->commit();
 
-    echo json_encode(['success' => true, 'message' => 'Категория \'' . htmlspecialchars($old_category_name) . '\' успешно переименована в \'' . htmlspecialchars($new_category_name) . '\' для ' . $affected_rows . ' товар(а/ов).', 'affected_rows' => $affected_rows]);
+    echo json_encode(['success' => true, 'message' => 'Категория \'' . htmlspecialchars($old_category_name) . '\' успешно переименована в \'' . htmlspecialchars($new_category_name) . '\' для ' . $affected_goods . ' товар(а/ов).', 'affected_rows' => $affected_goods]);
 
 } catch (PDOException $e) {
     if ($pdo->inTransaction()) {

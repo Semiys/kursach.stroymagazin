@@ -49,7 +49,8 @@ try {
         SELECT g.*, COUNT(pr.id) as rating_count
         FROM goods g
         JOIN product_ratings pr ON g.id = pr.product_id
-        WHERE g.stock_quantity > 0  -- Только товары в наличии
+        LEFT JOIN hidden_categories hc ON g.category = hc.category_name
+        WHERE g.stock_quantity > 0 AND g.is_hidden = 0 AND hc.category_name IS NULL
         GROUP BY g.id
         ORDER BY rating_count DESC
         LIMIT 4

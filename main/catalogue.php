@@ -168,17 +168,20 @@ if ($current_page < 1) {
 $offset = ($current_page - 1) * $products_per_page;
 
 // Формируем SQL-запрос для товаров
-$sql_products = "SELECT id, title, price, img, category, discr, rating, article, stock_quantity, discount FROM goods";
+// Выбираем все необходимые поля, включая g.discr, g.rating, g.article, которые могут использоваться в фильтрах или отображении
+$sql_select_part = "SELECT g.id, g.title, g.price, g.stock_quantity, g.img, g.category, g.discount, g.discr, g.rating, g.article";
+$sql_from_part = "FROM goods g LEFT JOIN hidden_categories hc ON g.category = hc.category_name";
+
+$where_conditions = [];
 $params_products = []; // Массив для параметров подготовленного выражения
-$where_clauses = []; // Массив для условий WHERE
+
+// Базовые условия: товар не скрыт И категория товара не скрыта
+$where_conditions[] = "g.is_hidden = 0";
+$where_conditions[] = "hc.category_name IS NULL";
 
 if (!empty($selected_categories_from_url)) {
-    // Создаем плейсхолдеры для IN clauses: (?, ?, ?)
     $placeholders = implode(',', array_fill(0, count($selected_categories_from_url), '?'));
-    $where_clauses[] = "category IN (" . $placeholders . ")";
-    // Добавляем выбранные категории в массив параметров
-    // array_values используется для переиндексации массива, если ключи не числовые (хотя в данном случае они должны быть)
-    // и для обеспечения правильного порядка параметров для execute
+    $where_conditions[] = "g.category IN (" . $placeholders . ")";
     foreach ($selected_categories_from_url as $category_value) {
         $params_products[] = $category_value;
     }
@@ -186,40 +189,38 @@ if (!empty($selected_categories_from_url)) {
 
 if (!empty($search_query)) {
     $search_term_like = '%' . $search_query . '%';
-    $where_clauses[] = "(title LIKE ? OR category LIKE ? OR discr LIKE ?)";
+    $where_conditions[] = "(g.title LIKE ? OR g.category LIKE ? OR g.discr LIKE ?)";
     $params_products[] = $search_term_like;
     $params_products[] = $search_term_like;
     $params_products[] = $search_term_like;
 }
 
 if ($price_min !== '') {
-    $where_clauses[] = "price >= ?";
+    $where_conditions[] = "g.price >= ?";
     $params_products[] = $price_min;
 }
 
 if ($price_max !== '') {
-    $where_clauses[] = "price <= ?";
+    $where_conditions[] = "g.price <= ?";
     $params_products[] = $price_max;
 }
 
 if ($rating_filter !== null && ($rating_filter == 3 || $rating_filter == 4)) {
-    $where_clauses[] = "rating >= ?";
+    $where_conditions[] = "g.rating >= ?";
     $params_products[] = $rating_filter;
 }
 
-if (!empty($where_clauses)) {
-    $sql_products .= " WHERE " . implode(' AND ', $where_clauses);
+$sql_where_part = "";
+if (!empty($where_conditions)) {
+    $sql_where_part = " WHERE " . implode(' AND ', $where_conditions);
 }
 
-// Сначала получаем общее количество товаров (для пагинации) с учетом фильтров
-$sql_total_products = "SELECT COUNT(*) FROM goods";
-if (!empty($where_clauses)) {
-    $sql_total_products .= " WHERE " . implode(' AND ', $where_clauses);
-}
+// Формируем SQL-запрос для общего количества товаров
+$sql_total_products = "SELECT COUNT(g.id) as total " . $sql_from_part . $sql_where_part;
 
 try {
     $stmt_total = $pdo->prepare($sql_total_products);
-    $stmt_total->execute($params_products); // Используем те же параметры, что и для основного запроса товаров (кроме LIMIT/OFFSET)
+    $stmt_total->execute($params_products);
     $total_products = (int)$stmt_total->fetchColumn();
 } catch (PDOException $e) {
     error_log("Ошибка подсчета товаров: " . $e->getMessage());
@@ -240,59 +241,71 @@ if ($current_page > $total_pages && $total_products > 0) { // Если теку�
     exit;
 }
 
-// Определяем часть ORDER BY на основе параметра sort_by
+$limit_sql = " LIMIT ? OFFSET ?";
+
+$order_by_sql = "";
 switch ($sort_by) {
     case 'price_asc':
-        $sql_products .= " ORDER BY price ASC";
+        $order_by_sql = " ORDER BY g.price ASC";
         break;
     case 'price_desc':
-        $sql_products .= " ORDER BY price DESC";
+        $order_by_sql = " ORDER BY g.price DESC";
         break;
     case 'name_asc':
-        $sql_products .= " ORDER BY title ASC";
+        $order_by_sql = " ORDER BY g.title ASC";
         break;
     case 'name_desc':
-        $sql_products .= " ORDER BY title DESC";
+        $order_by_sql = " ORDER BY g.title DESC";
         break;
+    case 'rating_desc':
+         $order_by_sql = " ORDER BY g.rating DESC";
+         break;
     case 'newest':
     default:
-        $sql_products .= " ORDER BY id DESC";
+        $order_by_sql = " ORDER BY g.id DESC";
         break;
 }
 
-$sql_products .= " LIMIT ? OFFSET ?"; // Используем позиционные плейсхолдеры
+// Формируем полный SQL-запрос для товаров с сортировкой и пагинацией
+$sql_products_final = $sql_select_part . " " . $sql_from_part . $sql_where_part . $order_by_sql . $limit_sql;
 
-// Пытаемся получить товары из базы данных с учетом фильтра
-try {
-    $stmt_products = $pdo->prepare($sql_products);
+$stmt_products = $pdo->prepare($sql_products_final);
 
-    // Формируем единый массив параметров для execute, включая параметры для WHERE, LIMIT и OFFSET
-    $executable_params = $params_products; // Это параметры для WHERE части (уже содержат ?)
-    $executable_params[] = (int)$products_per_page; // Добавляем параметр для LIMIT
-    $executable_params[] = (int)$offset;             // Добавляем параметр для OFFSET
-
-    // Явное приведение к (int) здесь для $products_per_page и $offset важно, 
-    // так как PDO::execute будет обрабатывать все элементы массива как строки по умолчанию,
-    // а LIMIT/OFFSET требуют числовых значений.
-    // Хотя $products_per_page у нас задана как int, и $offset вычисляется из int,
-    // для полной уверенности и предотвращения проблем с типами данных лучше так.
-
-    // $stmt_products->bindParam(':limit', $products_per_page, PDO::PARAM_INT); // Больше не нужно
-    // $stmt_products->bindParam(':offset', $offset, PDO::PARAM_INT); // Больше не нужно
-    
-    // $stmt_products->execute($params_products); // Старый вариант, где были только параметры WHERE
-    $stmt_products->execute($executable_params); // Передаем полный набор позиционных параметров
-    
-    $products = $stmt_products->fetchAll();
-} catch (PDOException $e) {
-    error_log("Ошибка загрузки товаров: " . $e->getMessage());
-    $products = [];
+// Привязываем параметры для WHERE CLAUSE
+$param_idx = 1;
+foreach ($params_products as $value) {
+    // Определяем тип параметра для большей точности (опционально, но хорошая практика)
+    $param_type = PDO::PARAM_STR;
+    if (is_int($value)) {
+        $param_type = PDO::PARAM_INT;
+    } elseif (is_bool($value)) {
+        $param_type = PDO::PARAM_BOOL;
+    } elseif (is_null($value)) {
+        $param_type = PDO::PARAM_NULL;
+    }
+    $stmt_products->bindValue($param_idx++, $value, $param_type);
 }
 
-// Пытаемся получить уникальные категории для отображения в фильтре (этот запрос не меняется)
+// Привязываем параметры для LIMIT и OFFSET как позиционные
+$stmt_products->bindValue($param_idx++, (int)$products_per_page, PDO::PARAM_INT);
+$stmt_products->bindValue($param_idx++, (int)$offset, PDO::PARAM_INT);
+
+$stmt_products->execute();
+$products = $stmt_products->fetchAll();
+
+// Пытаемся получить уникальные категории для отображения в фильтре
 $all_filter_categories = [];
 try {
-    $stmt_filter_categories = $pdo->query("SELECT DISTINCT category FROM goods WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
+    $stmt_filter_categories = $pdo->query("
+        SELECT DISTINCT g.category 
+        FROM goods g
+        LEFT JOIN hidden_categories hc ON g.category = hc.category_name
+        WHERE g.is_hidden = 0 
+          AND g.category IS NOT NULL 
+          AND g.category != ''
+          AND hc.category_name IS NULL
+        ORDER BY g.category ASC
+    ");
     $all_filter_categories = $stmt_filter_categories->fetchAll(PDO::FETCH_COLUMN, 0);
 } catch (PDOException $e) {
     error_log("Ошибка загрузки категорий для фильтра: " . $e->getMessage());
