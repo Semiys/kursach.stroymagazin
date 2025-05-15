@@ -96,9 +96,9 @@ try {
                     $quantity_in_cart = (int)$_SESSION['cart'][$product['id']];
                 }
                 ?>
-                <div class="col-md-3">
-                    <div class="product-card shadow-sm">
-                        <div class="position-relative">
+                    <div class="col-md-3">
+                        <div class="product-card shadow-sm">
+                            <div class="position-relative">
                             <?php
                             // Определяем путь к изображению товара
                             $imagePath = 'template/assets/500x500.png'; // Картинка по умолчанию
@@ -120,7 +120,7 @@ try {
                                 <span class="badge text-bg-danger discount-badge">СКИДКА <?php echo $discount_percentage; ?>%</span>
                                 <?php endif; ?>
                                 <?php if ($is_hit): ?>
-                                <span class="badge text-bg-success discount-badge">ХИТ</span>
+                                    <span class="badge text-bg-success discount-badge">ХИТ</span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -164,7 +164,7 @@ try {
                                         <button class="btn btn-sm btn-outline-primary increase-quantity-btn" data-product-id="<?php echo $product['id']; ?>">
                                             <i class="bi bi-plus"></i>
                                         </button>
-                                    </div>
+                                </div>
                                     <?php else: ?>
                                     <!-- Если товара нет в корзине, показываем соответствующую кнопку -->
                                     <?php if (isset($product['stock_quantity']) && $product['stock_quantity'] > 0): ?>

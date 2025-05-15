@@ -1,17 +1,24 @@
 <?php
+// Запускаем сессию в самом начале, чтобы она была доступна везде
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Подключаем конфигурацию для доступа к $pdo и другим настройкам
+// Это должно быть сделано до включения header.php, чтобы $pdo был доступен в нем
+require_once '../config.php';
+
 // НЕ включаем header.php сразу для AJAX-запросов
 // Сначала проверяем, это AJAX-запрос или нет
 $is_ajax_request = isset($_GET['ajax']) && $_GET['ajax'] === '1';
 
 // Если это не AJAX-запрос, включаем header.php
 if (!$is_ajax_request) {
-    include '../template/header.php'; // This should start the session
-} else {
-    // Для AJAX-запросов нужны только сессии, но не вывод HTML
-    session_start();
-}
+    // Теперь $pdo должен быть доступен внутри header.php для обновления роли
+    include '../template/header.php'; 
+} 
+// Для AJAX-запросов сессия уже запущена, и $pdo доступен, header не нужен.
 
-require_once '../config.php'; // Подключаем конфигурацию для доступа к $pdo
 // Теперь у нас есть доступ к переменной $pdo для работы с базой данных
 
 // Обработка действия очистки корзины

@@ -1,61 +1,61 @@
 // Выносим функцию updateCartBadge за пределы DOMContentLoaded, 
 // чтобы она была доступна глобально
 window.updateCartBadge = function(totalQuantity) {
-    const badge = document.querySelector('.cart-total-quantity-badge');
-    if (badge) {
-        if (totalQuantity > 0) {
-            badge.textContent = totalQuantity;
-            badge.classList.remove('d-none');
-        } else {
-            badge.textContent = '';
-            badge.classList.add('d-none');
+        const badge = document.querySelector('.cart-total-quantity-badge');
+        if (badge) {
+            if (totalQuantity > 0) {
+                badge.textContent = totalQuantity;
+                badge.classList.remove('d-none');
+            } else {
+                badge.textContent = '';
+                badge.classList.add('d-none');
+            }
         }
-    }
 };
 
 // Выносим функцию showGlobalNotification за пределы DOMContentLoaded,
 // чтобы она была доступна глобально для main.php и других скриптов
 window.showGlobalNotification = function(message, type = 'info', duration = 3500) {
-    // Проверяем, есть ли уже контейнер для глобальных уведомлений
-    let notifContainer = document.getElementById('global-notifications');
-    if (!notifContainer) {
-        notifContainer = document.createElement('div');
-        notifContainer.id = 'global-notifications';
-        notifContainer.className = 'position-fixed top-0 end-0 p-3';
-        notifContainer.style.zIndex = '1050';
-        document.body.appendChild(notifContainer);
-    }
+        // Проверяем, есть ли уже контейнер для глобальных уведомлений
+        let notifContainer = document.getElementById('global-notifications');
+        if (!notifContainer) {
+            notifContainer = document.createElement('div');
+            notifContainer.id = 'global-notifications';
+            notifContainer.className = 'position-fixed top-0 end-0 p-3';
+            notifContainer.style.zIndex = '1050';
+            document.body.appendChild(notifContainer);
+        }
 
-    const notification = document.createElement('div');
-    notification.className = `toast alert alert-${type} show`;
-    notification.role = 'alert';
-    notification.ariaLive = 'assertive';
-    notification.ariaAtomic = 'true';
-    
-    notification.innerHTML = `
-        <div class="toast-header">
-            <strong class="me-auto">Уведомление</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-            ${message}
-        </div>
-    `;
+        const notification = document.createElement('div');
+        notification.className = `toast alert alert-${type} show`;
+        notification.role = 'alert';
+        notification.ariaLive = 'assertive';
+        notification.ariaAtomic = 'true';
+        
+        notification.innerHTML = `
+            <div class="toast-header">
+                <strong class="me-auto">Уведомление</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
+        `;
 
-    notifContainer.appendChild(notification);
+        notifContainer.appendChild(notification);
 
-    // Устанавливаем обработчик закрытия
-    const closeBtn = notification.querySelector('.btn-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
+        // Устанавливаем обработчик закрытия
+        const closeBtn = notification.querySelector('.btn-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                notification.remove();
+            });
+        }
+
+        // Автоматически удаляем уведомление через указанное время
+        setTimeout(() => {
             notification.remove();
-        });
-    }
-
-    // Автоматически удаляем уведомление через указанное время
-    setTimeout(() => {
-        notification.remove();
-    }, duration);
+        }, duration);
 };
 
 // Глобальная переменная, чтобы знать, что этот скрипт был загружен

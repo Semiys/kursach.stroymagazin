@@ -140,22 +140,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
         try {
             // Начинаем транзакцию
             $pdo->beginTransaction();
-            
+        
             // Получаем ID пользователя, если он авторизован, или устанавливаем null для гостя
             $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
             
             // Проверяем, что есть ID пользователя (должен быть, т.к. мы проверяем авторизацию выше)
             if ($user_id === null) {
                 throw new Exception('Пользователь не авторизован');
-            }
-            
-            // Рассчитываем итоговую сумму
-            $shipping_cost = 10.00; // Фиксированная стоимость доставки
-            $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0;
+        }
+        
+        // Рассчитываем итоговую сумму
+        $shipping_cost = 10.00; // Фиксированная стоимость доставки
+        $discount_amount = isset($_SESSION['promo_discount']) ? (float)$_SESSION['promo_discount'] : 0;
             $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
-            
-            // Получаем информацию о промокоде, если он был применен
-            $promo_code = isset($_SESSION['applied_promo_code']) ? $_SESSION['applied_promo_code'] : null;
+        
+        // Получаем информацию о промокоде, если он был применен
+        $promo_code = isset($_SESSION['applied_promo_code']) ? $_SESSION['applied_promo_code'] : null;
             
             // Создаем запись в таблице orders
             $order_stmt = $pdo->prepare("
@@ -213,41 +213,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_order'])) {
             
             // Завершаем транзакцию
             $pdo->commit();
-            
-            // Отправляем email-уведомление о заказе
-            $mail_sent = sendOrderConfirmationEmail(
-                $email, 
-                $name, 
+        
+        // Отправляем email-уведомление о заказе
+        $mail_sent = sendOrderConfirmationEmail(
+            $email, 
+            $name, 
                 $order_id, 
                 date('Y-m-d H:i:s'), 
                 $cart_products, 
                 $total_cart_value, 
-                $shipping_cost, 
-                $discount_amount, 
-                $grand_total, 
-                $address, 
-                $phone, 
-                $payment_method,
-                $promo_code
-            );
-            
-            if (!$mail_sent) {
-                // Логируем ошибку, но позволяем процессу продолжиться
-                error_log("Failed to send order confirmation email to: $email");
-            }
-            
-            // Очищаем корзину
-            $_SESSION['cart'] = [];
-            unset($_SESSION['applied_promo_code']);
-            unset($_SESSION['promo_discount']);
-            
-            // Сохраняем номер заказа для отображения на странице подтверждения
+            $shipping_cost, 
+            $discount_amount, 
+            $grand_total, 
+            $address, 
+            $phone, 
+            $payment_method,
+            $promo_code
+        );
+        
+        if (!$mail_sent) {
+            // Логируем ошибку, но позволяем процессу продолжиться
+            error_log("Failed to send order confirmation email to: $email");
+        }
+        
+        // Очищаем корзину
+        $_SESSION['cart'] = [];
+        unset($_SESSION['applied_promo_code']);
+        unset($_SESSION['promo_discount']);
+        
+        // Сохраняем номер заказа для отображения на странице подтверждения
             $_SESSION['last_order_number'] = $order_id;
-            
-            // Перенаправляем на страницу успешного заказа
+        
+        // Перенаправляем на страницу успешного заказа
             $_SESSION['flash_message'] = ['type' => 'success', 'text' => 'Ваш заказ #' . $order_id . ' успешно оформлен! Благодарим за покупку.'];
-            header('Location: order_success.php');
-            exit;
+        header('Location: order_success.php');
+        exit;
         } catch (Exception $e) {
             // В случае ошибки отменяем транзакцию
             if ($pdo->inTransaction()) {

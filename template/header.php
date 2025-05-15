@@ -1,5 +1,22 @@
 <?php
 session_start(); // Запускаем сессию, если она еще не запущена
+
+// Попытка обновить роль пользователя из БД, если он залогинен
+// Это предполагает, что $pdo (из config.php) доступен в этой области видимости
+if (isset($_SESSION['user_id']) && isset($pdo)) { // Убедимся, что $pdo существует
+    try {
+        $stmt_role_check = $pdo->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt_role_check->execute([$_SESSION['user_id']]);
+        $current_db_role = $stmt_role_check->fetchColumn();
+
+        if ($current_db_role && (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $current_db_role)) {
+            $_SESSION['user_role'] = $current_db_role;
+        }
+    } catch (PDOException $e) {
+        // Ошибку можно залогировать, но не прерывать работу хедера
+        // error_log("Error fetching user role for session update: " . $e->getMessage());
+    }
+}
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--orange-primary);">
     <div class="container">
@@ -25,10 +42,18 @@ session_start(); // Запускаем сессию, если она еще не
                     // Если пользователь авторизован, показываем кнопку Профиль
                     // (Предполагается, что если есть user_id, то есть и user_login)
                     $user_login = isset($_SESSION['user_login']) ? $_SESSION['user_login'] : 'Пользователь';
-                    ?>
+                        ?>
                     <a href="/main/profile.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
                         <i class="bi bi-person-fill me-1"></i>Профиль
                     </a>
+                    <?php 
+                    // Добавляем кнопку для модераторской панели, если роль пользователя - moder
+                    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'moder'): 
+                    ?>
+                        <a href="/moderator/index.php" class="btn me-2 btn-warning" style="color: black;">
+                            <i class="bi bi-shield-lock-fill me-1"></i>Модерка
+                        </a>
+                    <?php endif; ?>
                 <?php else: ?>
                     <a href="/main/login.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
                         <i class="bi bi-box-arrow-in-right me-1"></i>Войти

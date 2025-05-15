@@ -1,0 +1,129 @@
+/* Базовые стили для модераторской панели */
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+}
+
+main {
+    padding: 1rem;
+}
+
+/* Общие стили для тела модераторской панели */
+body.moderator-panel-body {
+    background-color: #f8f9fa; /* Очень светло-серый фон, почти белый */
+    color: #212529; /* Основной цвет текста - темный */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.main-content-flex {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Стили для навигационной панели модератора */
+.moderator-navbar .navbar-brand {
+    font-weight: 600;
+}
+
+.moderator-navbar .nav-link {
+    font-weight: 500;
+}
+
+/* Активная ссылка в навигации - оранжевая */
+.moderator-navbar .nav-link.active-orange {
+    color: #fd7e14 !important; /* Яркий оранжевый Bootstrap */
+    font-weight: bold;
+}
+
+.moderator-navbar .nav-link:hover {
+    color: #ffc107; /* Светло-оранжевый/желтый при наведении */
+}
+
+/* Стили для карточек */
+.card {
+    border: 1px solid #dee2e6; /* Стандартная рамка Bootstrap */
+}
+
+.card-header {
+    background-color: #e9ecef; /* Светло-серый фон для заголовков карточек */
+    color: #212529;
+    font-weight: bold;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Стилизация заголовков карточек в стиле модераторской панели - можно сделать оранжевым */
+.moderator-panel-body .card-header {
+    background-color: #343a40; /* Темный фон для заголовка карточки */
+    color: #ffffff; /* Белый текст на темном фоне */
+}
+
+/* Таблицы */
+.table thead.table-dark {
+    background-color: #212529; /* Черный цвет для заголовка таблицы */
+    color: #fff;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.03); /* Чуть темнее для полосатой таблицы */
+}
+
+/* Кнопки */
+.btn-primary-orange {
+    background-color: #fd7e14; /* Яркий оранжевый */
+    border-color: #fd7e14;
+    color: #ffffff;
+}
+
+.btn-primary-orange:hover, 
+.btn-primary-orange:focus {
+    background-color: #e66f0f;
+    border-color: #da680e;
+    color: #ffffff;
+}
+
+.btn-success {
+    background-color: #198754; /* Стандартный зеленый Bootstrap */
+    border-color: #198754;
+}
+
+.btn-danger {
+    background-color: #dc3545; /* Стандартный красный Bootstrap */
+    border-color: #dc3545;
+}
+
+.btn-secondary {
+    background-color: #6c757d; /* Стандартный серый Bootstrap */
+    border-color: #6c757d;
+}
+
+/* Футер модератора */
+.moderator-footer {
+    font-size: 0.9em;
+    margin-top: auto; /* Добавлено для прижатия футера вниз */
+}
+
+/* Ссылки в модераторской панели */
+a {
+    color: #fd7e14; /* Оранжевый для ссылок по умолчанию */
+}
+
+a:hover {
+    color: #e66f0f;
+}
+
+/* Заголовки страниц h2, h3, h4 */
+.moderator-panel-body h2, 
+.moderator-panel-body h3, 
+.moderator-panel-body h4 {
+    color: #343a40; /* Темный цвет для заголовков */
+} 

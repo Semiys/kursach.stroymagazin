@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repeat_order'])) {
             <thead class="table-dark">
                 <tr>
                     <th>ID заказа</th>
-                    <th>Сумма</th>
+                                        <th>Сумма</th>
                     <th>Статус</th>
                     <th>Дата</th>
                     <th>Действие</th>
@@ -180,16 +180,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repeat_order'])) {
                                 <button class="btn btn-info btn-sm view-order-btn" data-bs-toggle="modal" data-bs-target="#orderDetailsModal" data-order-id="<?php echo $order['id']; ?>">
                                     Посмотреть заказ
                                 </button>
-                                <form method="POST" style="display:inline-block;">
+                                                                    <form method="POST" style="display:inline-block;">
                                     <input type="hidden" name="repeat_order" value="<?php echo $order['id']; ?>">
-                                    <button type="submit" class="btn btn-success btn-sm w-100">Повторить заказ</button>
-                                </form>
-                            </div>
+                                        <button type="submit" class="btn btn-success btn-sm w-100">Повторить заказ</button>
+                                    </form>
+                                                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
-            </tbody>
+                            </tbody>
         </table>
     </div>
 
@@ -202,9 +202,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['repeat_order'])) {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="orderDetailsContent">
+        <div id="orderDetailsContent"> 
             <p class="text-center">Загрузка информации о заказе...</p>
-        </div>
+            </div>
       </div>
     </div>
   </div>
@@ -313,7 +313,7 @@ document.querySelectorAll('.view-order-btn').forEach(button => {
             let itemsHtml = '';
             
             if (data.items && data.items.length > 0) {
-              data.items.forEach(item => {
+            data.items.forEach(item => {
                 const price = parseFloat(item.price) || 0;
                 const quantity = parseInt(item.quantity) || 0;
                 const discountPercentage = parseInt(item.discount_percentage) || 0;
@@ -321,15 +321,15 @@ document.querySelectorAll('.view-order-btn').forEach(button => {
                 const totalPrice = price * quantity;
                 const discountedPrice = price * (1 - discountPercentage/100) * quantity;
                 
-                itemsHtml += `
-                  <tr>
+              itemsHtml += `
+                <tr>
                     <td>${item.title || 'Товар не найден'}</td>
                     <td>${quantity} шт.</td>
                     <td>${price.toFixed(2)} ₽</td>
                     <td>${totalPrice.toFixed(2)} ₽</td>
                     <td>${discountedPrice.toFixed(2)} ₽</td>
-                  </tr>`;
-              });
+                </tr>`;
+            });
             } else {
               itemsHtml = '<tr><td colspan="5" class="text-center">Товары не найдены</td></tr>';
             }
