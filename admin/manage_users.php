@@ -32,9 +32,16 @@ $offset = ($page - 1) * $users_per_page;
 $search_query = $_GET['search'] ?? '';
 $filter_role = $_GET['role'] ?? '';
 $filter_verified = $_GET['verified'] ?? '';
+$filter_active_status = $_GET['active_status'] ?? 'all'; // 'all', 'active', 'inactive'
 
 $where_clauses = [];
 $params = [];
+
+if ($filter_active_status === 'active') {
+    $where_clauses[] = "users.is_active = 1";
+} elseif ($filter_active_status === 'inactive') {
+    $where_clauses[] = "users.is_active = 0";
+}
 
 if (!empty($search_query)) {
     $where_clauses[] = "(users.name LIKE :search OR users.email LIKE :search)";
@@ -61,7 +68,7 @@ try {
     $total_pages = ceil($total_users / $users_per_page);
 
     // Получаем пользователей для текущей страницы
-    $sql = "SELECT users.id, users.name, users.email, users.role, users.accept, users.created_at 
+    $sql = "SELECT users.id, users.name, users.email, users.role, users.accept, users.is_active, users.created_at 
             FROM users" 
            . $where_sql 
            . " ORDER BY users.id DESC LIMIT :limit OFFSET :offset";
@@ -120,6 +127,13 @@ $all_roles = ['user' => 'Пользователь', 'moder' => 'Модерато
                 </select>
             </div>
             <div class="col-md-2">
+                 <select name="active_status" class="form-select">
+                    <option value="all" <?php echo $filter_active_status === 'all' ? 'selected' : ''; ?>>Все статусы</option>
+                    <option value="active" <?php echo $filter_active_status === 'active' ? 'selected' : ''; ?>>Только активные</option>
+                    <option value="inactive" <?php echo $filter_active_status === 'inactive' ? 'selected' : ''; ?>>Только деактивированные</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <button type="submit" class="btn btn-primary-blue w-100">Применить</button>
             </div>
         </div>
@@ -140,6 +154,7 @@ $all_roles = ['user' => 'Пользователь', 'moder' => 'Модерато
                         <th>Email</th>
                         <th>Роль</th>
                         <th>Верификация</th>
+                        <th>Статус</th>
                         <th>Регистрация</th>
                         <th>Действия</th>
                     </tr>
@@ -168,16 +183,31 @@ $all_roles = ['user' => 'Пользователь', 'moder' => 'Модерато
                                     <span class="badge bg-warning text-dark">Нет</span>
                                 <?php endif; ?>
                             </td>
+                            <td>
+                                <?php if ($user['is_active']): ?>
+                                    <span class="badge bg-success">Активен</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger">Деактивирован</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars(date("d.m.Y H:i", strtotime($user['created_at']))); ?></td>
                             <td>
-                                <!-- TODO: Сюда можно добавить кнопку просмотра детальной информации о пользователе -->
-                                <!-- <a href="view_user.php?id=<?php echo $user['id']; ?>" class="btn btn-info btn-sm"><i class="bi bi-eye"></i></a> -->
-                                <?php if ($user['role'] === 'admin' && $user['id'] != $_SESSION['user_id'] ): ?>
-                                    <small class="text-muted">Админ</small>
-                                <?php elseif ($user['id'] == $_SESSION['user_id']): ?>
-                                     <small class="text-muted">Это вы</small>
-                                <?php else: ?> 
-                                     <!-- Можно добавить какие-то действия, если они нужны для обычных юзеров или модеров -->
+                                <?php if ($user['id'] != $_SESSION['user_id']): // Нельзя деактивировать самого себя ?>
+                                    <?php if ($user['is_active']): ?>
+                                        <button class="btn btn-warning btn-sm mb-1 toggle-user-activation-btn"
+                                                data-user-id="<?php echo $user['id']; ?>"
+                                                data-action="deactivate">
+                                            <i class="bi bi-person-dash-fill"></i> Деактивировать
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="btn btn-success btn-sm mb-1 toggle-user-activation-btn"
+                                                data-user-id="<?php echo $user['id']; ?>"
+                                                data-action="activate">
+                                            <i class="bi bi-person-check-fill"></i> Активировать
+                                        </button>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <small class="text-muted">Это вы</small>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -192,7 +222,7 @@ $all_roles = ['user' => 'Пользователь', 'moder' => 'Модерато
                 <ul class="pagination justify-content-center">
                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                         <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search_query); ?>&role=<?php echo urlencode($filter_role); ?>&verified=<?php echo urlencode($filter_verified); ?>"><?php echo $i; ?></a>
+                            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search_query); ?>&role=<?php echo urlencode($filter_role); ?>&verified=<?php echo urlencode($filter_verified); ?>&active_status=<?php echo urlencode($filter_active_status); ?>"><?php echo $i; ?></a>
                         </li>
                     <?php endfor; ?>
                 </ul>
@@ -391,6 +421,74 @@ document.addEventListener('DOMContentLoaded', function () {
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Активация/деактивация пользователя
+    document.querySelectorAll('.toggle-user-activation-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.dataset.userId;
+            const action = this.dataset.action; // 'activate' or 'deactivate'
+            const actionUrl = (action === 'activate') ? 'ajax_activate_user.php' : 'ajax_deactivate_user.php';
+            
+            const userRow = this.closest('tr');
+            const statusBadge = userRow ? userRow.querySelector('td:nth-child(6) span.badge') : null; // Предполагаем, что статус 6-я колонка
+
+            const formData = new FormData();
+            formData.append('user_id', userId);
+            // Добавляем CSRF токен, если используется в системе
+            // formData.append('csrf_token', 'your_csrf_token_here'); 
+
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (toastBody && roleChangeToast) { // Используем существующий toast для простоты
+                        toastBody.textContent = data.message || `Пользователь успешно ${action === 'activate' ? 'активирован' : 'деактивирован'}.`;
+                        roleChangeToast.show();
+                    }
+
+                    // Динамическое обновление кнопки и статуса
+                    if (action === 'activate') {
+                        this.innerHTML = '<i class="bi bi-person-dash-fill"></i> Деактивировать';
+                        this.dataset.action = 'deactivate';
+                        this.classList.remove('btn-success');
+                        this.classList.add('btn-warning');
+                        if (statusBadge) {
+                            statusBadge.textContent = 'Активен';
+                            statusBadge.classList.remove('bg-danger');
+                            statusBadge.classList.add('bg-success');
+                        }
+                    } else { // action === 'deactivate'
+                        this.innerHTML = '<i class="bi bi-person-check-fill"></i> Активировать';
+                        this.dataset.action = 'activate';
+                        this.classList.remove('btn-warning');
+                        this.classList.add('btn-success');
+                        if (statusBadge) {
+                            statusBadge.textContent = 'Деактивирован';
+                            statusBadge.classList.remove('bg-success');
+                            statusBadge.classList.add('bg-danger');
+                        }
+                    }
+                } else {
+                    if (toastBody && roleChangeToast) {
+                        toastBody.textContent = data.message || `Не удалось ${action === 'activate' ? 'активировать' : 'деактивировать'} пользователя.`;
+                        roleChangeToast.show();
+                    }
+                    alert("Ошибка: " + (data.message || 'Неизвестная ошибка от сервера.')); // Дополнительный alert для явной ошибки
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling user activation:', error);
+                if (toastBody && roleChangeToast) {
+                    toastBody.textContent = 'Произошла ошибка при отправке запроса.';
+                    roleChangeToast.show();
+                }
+                alert('Сетевая ошибка при попытке изменить статус пользователя.');
+            });
+        });
     });
 });
 </script>

@@ -33,7 +33,7 @@ try {
 // Получаем историю заказов пользователя
 $orders = [];
 try {
-    $stmt = $pdo->prepare("SELECT id, total_amount, status, created_at FROM orders WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt = $pdo->prepare("SELECT id, total_amount, status, created_at FROM orders WHERE user_id = ? AND is_hidden = 0 ORDER BY created_at DESC");
     $stmt->execute([$user_id]);
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

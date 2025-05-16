@@ -15,26 +15,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             // Ищем пользователя по email или логину
-            $stmt = $pdo->prepare("SELECT id, email, login, password, role, accept FROM users WHERE email = ? OR login = ?");
+            $stmt = $pdo->prepare("SELECT id, email, login, password, role, accept, is_active FROM users WHERE email = ? OR login = ?");
             $stmt->execute([$identifier, $identifier]); // Передаем $identifier дважды для каждого плейсхолдера
             $user = $stmt->fetch();
 
             if ($user) {
                 // Пользователь найден, проверяем статус подтверждения email
                 if ($user['accept'] == 1) {
-                    // Email подтвержден, проверяем пароль
-                    if (password_verify($password, $user['password'])) {
-                        // Пароль верный
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['user_email'] = $user['email']; // Можно добавить и другие данные, если нужны
-                        $_SESSION['user_login'] = $user['login']; // Сохраним и логин в сессию
-                        $_SESSION['user_role'] = $user['role'];
-                        // Перенаправляем на главную страницу или в личный кабинет
-                        header("Location: ../index.php"); // Предполагаем, что главная страница в корне
-                        exit();
+                    // Email подтвержден, проверяем активен ли пользователь
+                    if ($user['is_active'] == 1) {
+                        // Пользователь активен, проверяем пароль
+                        if (password_verify($password, $user['password'])) {
+                            // Пароль верный
+                            $_SESSION['user_id'] = $user['id'];
+                            $_SESSION['user_email'] = $user['email']; // Можно добавить и другие данные, если нужны
+                            $_SESSION['user_login'] = $user['login']; // Сохраним и логин в сессию
+                            $_SESSION['user_role'] = $user['role'];
+                            // Перенаправляем на главную страницу или в личный кабинет
+                            header("Location: ../index.php"); // Предполагаем, что главная страница в корне
+                            exit();
+                        } else {
+                            // Неверный пароль
+                            $error_message = "Неверный email/логин или пароль.";
+                        }
                     } else {
-                        // Неверный пароль
-                        $error_message = "Неверный email/логин или пароль.";
+                        // Пользователь деактивирован
+                        $error_message = "Ваш аккаунт деактивирован. Обратитесь к администратору.";
                     }
                 } else {
                     // Email не подтвержден

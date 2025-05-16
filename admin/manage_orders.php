@@ -36,9 +36,14 @@ $search_query = $_GET['search'] ?? ''; // По ID заказа, email, теле�
 $filter_status = $_GET['status'] ?? '';
 $date_from = $_GET['date_from'] ?? '';
 $date_to = $_GET['date_to'] ?? '';
+$show_hidden = isset($_GET['show_hidden']) && $_GET['show_hidden'] === '1';
 
 $where_clauses = [];
 $params = [];
+
+if (!$show_hidden) {
+    $where_clauses[] = "o.is_hidden = 0";
+}
 
 if (!empty($search_query)) {
     $where_clauses[] = "(o.id LIKE :search OR u.email LIKE :search OR u.name LIKE :search)";
@@ -64,14 +69,26 @@ $where_sql = count($where_clauses) > 0 ? ' WHERE ' . implode(' AND ', $where_cla
 
 try {
     // Запрос для общего количества заказов (для пагинации)
-    $total_stmt = $pdo->prepare("SELECT COUNT(*) FROM orders o" . $where_sql);
+    $count_where_sql = $where_sql; // Копируем для подсчета
+    // Если $where_sql пустой, но есть поиск, то WHERE будет добавлен в $total_stmt
+    // Если $where_sql не пустой (из-за is_hidden), то JOIN для поиска нужно добавить к существующему WHERE
+
+    $total_stmt_sql = "SELECT COUNT(*) FROM orders o ";
+    if (strpos($count_where_sql, 'u.name') !== false || strpos($count_where_sql, 'u.email') !== false) {
+        // Добавляем LEFT JOIN users если он нужен для WHERE, но еще не является частью $count_where_sql из-за is_hidden
+        if (strpos($count_where_sql, 'LEFT JOIN users u ON o.user_id = u.id') === false) {
+             $total_stmt_sql .= " LEFT JOIN users u ON o.user_id = u.id ";
+        }
+    }
+    $total_stmt_sql .= $count_where_sql;
+
+    $total_stmt = $pdo->prepare($total_stmt_sql);
     $total_stmt->execute($params);
     $total_orders = $total_stmt->fetchColumn();
     $total_pages = ceil($total_orders / $orders_per_page);
 
     // Запрос для получения заказов на текущую страницу
-    $sql = "SELECT o.id, o.user_id, o.total_amount, o.status, o.created_at, 
-                   u.login as user_login, u.name as user_db_name, u.email as user_db_email
+    $sql = "SELECT o.*, u.login as user_login, u.name as user_db_name, u.email as user_db_email
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id"
            . $where_sql
@@ -141,6 +158,14 @@ $order_statuses = [
                 <label for="date_to" class="form-label">Дата до</label>
                 <input type="date" id="date_to" name="date_to" class="form-control" value="<?php echo htmlspecialchars($date_to); ?>">
             </div>
+            <div class="col-md-2 align-self-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="show_hidden" id="show_hidden" value="1" <?php echo $show_hidden ? 'checked' : ''; ?>>
+                    <label class="form-check-label" for="show_hidden">
+                        Показать скрытые
+                    </label>
+                </div>
+            </div>
             <div class="col-md-1">
                 <button type="submit" class="btn btn-primary-blue w-100">Фильтр</button>
             </div>
@@ -203,6 +228,19 @@ $order_statuses = [
                                         data-order-id="<?php echo $order['id']; ?>">
                                     <i class="bi bi-eye-fill"></i> Детали
                                 </button>
+                                <?php if ($order['is_hidden'] == 1): ?>
+                                    <button class="btn btn-success btn-sm mb-1 toggle-order-visibility-btn"
+                                            data-order-id="<?php echo $order['id']; ?>"
+                                            data-action="show">
+                                        <i class="bi bi-eye-fill"></i> Показать
+                                    </button>
+                                <?php else: ?>
+                                    <button class="btn btn-secondary btn-sm mb-1 toggle-order-visibility-btn"
+                                            data-order-id="<?php echo $order['id']; ?>"
+                                            data-action="hide">
+                                        <i class="bi bi-eye-slash-fill"></i> Скрыть
+                                    </button>
+                                <?php endif; ?>
                                  <!-- <a href="edit_order.php?id=<?php echo $order['id']; ?>" class="btn btn-warning btn-sm"><i class="bi bi-pencil-fill"></i> Ред.</a> -->
                             </td>
                         </tr>
@@ -364,6 +402,64 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     });
+
+    // Скрытие/показ заказа
+    document.querySelectorAll('.toggle-order-visibility-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const orderId = this.dataset.orderId;
+            const action = this.dataset.action; // 'hide' or 'show'
+            const actionUrl = (action === 'hide') ? 'ajax_hide_order.php' : 'ajax_show_order.php';
+
+            const formData = new FormData();
+            formData.append('order_id', orderId);
+
+            fetch(actionUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showOrderToast(data.message || `Заказ успешно ${action === 'hide' ? 'скрыт' : 'показан'}.`, 'success');
+                    
+                    // Динамическое обновление строки и кнопки
+                    const row = button.closest('tr'); // Находим строку таблицы
+                    const showHiddenCheckbox = document.getElementById('show_hidden');
+
+                    if (action === 'hide') {
+                        button.innerHTML = '<i class="bi bi-eye-fill"></i> Показать';
+                        button.dataset.action = 'show';
+                        button.classList.remove('btn-secondary');
+                        button.classList.add('btn-success');
+                        if (row && !showHiddenCheckbox.checked) {
+                            row.style.display = 'none'; // Скрываем строку, если не стоит галочка "Показывать скрытые"
+                        } else if (row) {
+                            // Можно добавить класс для визуального отличия скрытой строки, если она отображается
+                            row.classList.add('order-hidden-row'); 
+                        }
+                    } else { // action === 'show'
+                        button.innerHTML = '<i class="bi bi-eye-slash-fill"></i> Скрыть';
+                        button.dataset.action = 'hide';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-secondary');
+                        if (row) {
+                            row.style.display = ''; // Показываем строку (если она была скрыта display:none)
+                            row.classList.remove('order-hidden-row');
+                        }
+                    }
+                    // Обновляем is_hidden в каком-нибудь data-атрибуте строки, если это нужно для других скриптов
+                    if(row) row.dataset.isHidden = (action === 'hide') ? '1' : '0';
+                } else {
+                    showOrderToast(data.error || `Не удалось ${action === 'hide' ? 'скрыть' : 'показать'} заказ.`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error(`Error ${action}ing order:`, error);
+                showOrderToast(`Произошла ошибка при ${action === 'hide' ? 'скрытии' : 'показе'} заказа.`, 'error');
+            });
+        });
+    });
+
 });
 </script>
 
