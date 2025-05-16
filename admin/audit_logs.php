@@ -128,10 +128,10 @@ try {
                             <td><?php echo htmlspecialchars($log['target_id'] ?: '-'); ?></td>
                             <td>
                                 <small style="max-width: 300px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
-                                       title="<?php echo htmlspecialchars($log['details']); ?>">
-                                    <?php echo htmlspecialchars($log['details']); ?>
+                                       title="<?php echo htmlspecialchars($log['details'] ?? ''); ?>">
+                                    <?php echo htmlspecialchars($log['details'] ?? '-'); ?>
                                 </small>
-                                <?php if (strlen($log['details']) > 50): // Показываем кнопку, если текст длинный ?>
+                                <?php if (is_string($log['details']) && strlen($log['details']) > 50): // Показываем кнопку, если текст длинный и не null ?>
                                 <button class="btn btn-sm btn-outline-secondary ms-1 view-details-btn" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#detailsModal" 

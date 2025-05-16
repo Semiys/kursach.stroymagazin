@@ -40,7 +40,7 @@ try {
     $stmt = $pdo->query("SELECT DISTINCT category FROM goods WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
     $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    $stmt_text_cat = $pdo->query("SELECT name FROM text_categories ORDER BY name ASC");
+    $stmt_text_cat = $pdo->query("SELECT category_name FROM hidden_categories ORDER BY category_name ASC");
     $text_categories = $stmt_text_cat->fetchAll(PDO::FETCH_COLUMN);
 
 } catch (PDOException $e) {

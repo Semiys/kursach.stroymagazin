@@ -34,11 +34,22 @@ try {
             $response['message'] = 'Товар (ID: ' . $product_id . ') успешно сделан видимым.';
             unset($response['error']);
 
+            // Получаем название товара для лога
+            $product_title = 'Неизвестный товар';
+            $title_stmt = $pdo->prepare("SELECT title FROM goods WHERE id = ?");
+            if ($title_stmt->execute([$product_id])) {
+                $product_data = $title_stmt->fetch(PDO::FETCH_ASSOC);
+                if ($product_data && !empty($product_data['title'])) {
+                    $product_title = $product_data['title'];
+                }
+            }
+
             log_audit_action(
                 action: 'PRODUCT_SHOWN',
                 user_id: $_SESSION['user_id'],
                 target_type: 'product',
-                target_id: $product_id
+                target_id: $product_id,
+                details: ['product_title' => $product_title]
             );
 
         } else {
