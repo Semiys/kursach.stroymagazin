@@ -53,6 +53,14 @@ if (isset($_SESSION['user_id']) && isset($pdo)) { // Убедимся, что $p
                         <a href="/moderator/index.php" class="btn me-2 btn-warning" style="color: black;">
                             <i class="bi bi-shield-lock-fill me-1"></i>Модерка
                         </a>
+                    <?php 
+                    endif; 
+                    // Добавляем кнопку для администраторской панели, если роль пользователя - admin
+                    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): 
+                    ?>
+                        <a href="/admin/index.php" class="btn me-2 btn-danger" style="color: white;"> <!-- Используем btn-danger для отличия -->
+                            <i class="bi bi-shield-shaded me-1"></i>Админка
+                        </a>
                     <?php endif; ?>
                 <?php else: ?>
                     <a href="/main/login.php" class="btn me-2" style="background-color: var(--orange-dark); border-color: var(--orange-dark); color: white;">
