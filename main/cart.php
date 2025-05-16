@@ -208,7 +208,7 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                             $item_image_db_path = htmlspecialchars($item['img']); // e.g., uploads/product_images/image.jpg
                                             // __DIR__ is /main, $item_image_db_path is root-relative (uploads/...)
                                             $image_filesystem_path = __DIR__ . '/../' . $item_image_db_path;
-
+                                            
                                             if (file_exists($image_filesystem_path)) {
                                                 // src path is also relative from /main
                                                 $image_display_path = '../' . $item_image_db_path;

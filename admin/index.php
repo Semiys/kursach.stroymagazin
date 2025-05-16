@@ -54,6 +54,10 @@ include_once 'header.php';
                         <i class="bi bi-people-fill me-2"></i>Управление пользователями 
                         <small class="text-muted d-block">Просмотр информации и управление ролями пользователей</small>
                     </a>
+                    <a href="manage_promo_codes.php" class="list-group-item list-group-item-action">
+                        <i class="bi bi-ticket-perforated-fill me-2"></i>Управление промокодами
+                        <small class="text-muted d-block">Создание, редактирование и управление промокодами</small>
+                    </a>
                 </div>
             </div>
         </div>

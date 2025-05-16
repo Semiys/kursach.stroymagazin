@@ -184,10 +184,25 @@ body.admin-panel-body {
     color: #e9ecef; /* Светло-серый при наведении */
 }
 
+/* Стили для иконок Bootstrap внутри .nav-link */
+.admin-navbar .nav-link i.bi {
+    /* margin-right: 6px; /* Отступ Bootstrap me-2 будет использоваться */
+    color: #ffffff !important; /* Явно белый цвет для всех иконок в nav-link */
+    vertical-align: middle; /* Попробуем другое выравнивание */
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: inline-block !important; /* Убедимся что элемент отображается как блочный */
+}
+
 /* Стилизация заголовков карточек в стиле администраторской панели */
 .admin-panel-body .card-header {
     background-color: #007bff; /* Синий фон для заголовка карточки */
     color: #ffffff; /* Белый текст на синем фоне */
+}
+
+/* Заголовки h2 внутри card-header должны быть белыми */
+.admin-panel-body .card-header h2 {
+    color: #ffffff; /* Белый цвет текста для h2 в card-header */
 }
 
 /* Кнопки для администраторской панели */
@@ -228,6 +243,13 @@ body.admin-panel-body {
 .admin-panel-body h3, 
 .admin-panel-body h4 {
     color: #0056b3; /* Темно-синий для заголовков */
+}
+
+/* Специальный класс для синего заголовка таблицы */
+.table > thead.thead-primary-blue > tr > th {
+    background-color: #007bff; /* Bootstrap Primary Blue */
+    color: #ffffff;
+    border-color: #007bff; /* Чтобы граница тоже была синей */
 }
 
 /* Исправление отступа между шапкой и контентом */

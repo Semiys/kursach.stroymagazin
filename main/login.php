@@ -25,18 +25,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // Email подтвержден, проверяем активен ли пользователь
                     if ($user['is_active'] == 1) {
                         // Пользователь активен, проверяем пароль
-                        if (password_verify($password, $user['password'])) {
-                            // Пароль верный
-                            $_SESSION['user_id'] = $user['id'];
-                            $_SESSION['user_email'] = $user['email']; // Можно добавить и другие данные, если нужны
-                            $_SESSION['user_login'] = $user['login']; // Сохраним и логин в сессию
-                            $_SESSION['user_role'] = $user['role'];
-                            // Перенаправляем на главную страницу или в личный кабинет
-                            header("Location: ../index.php"); // Предполагаем, что главная страница в корне
-                            exit();
-                        } else {
-                            // Неверный пароль
-                            $error_message = "Неверный email/логин или пароль.";
+                    if (password_verify($password, $user['password'])) {
+                        // Пароль верный
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['user_email'] = $user['email']; // Можно добавить и другие данные, если нужны
+                        $_SESSION['user_login'] = $user['login']; // Сохраним и логин в сессию
+                        $_SESSION['user_role'] = $user['role'];
+                        // Перенаправляем на главную страницу или в личный кабинет
+                        header("Location: ../index.php"); // Предполагаем, что главная страница в корне
+                        exit();
+                    } else {
+                        // Неверный пароль
+                        $error_message = "Неверный email/логин или пароль.";
                         }
                     } else {
                         // Пользователь деактивирован

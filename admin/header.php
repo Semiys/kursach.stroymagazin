@@ -25,31 +25,34 @@
         <div class="collapse navbar-collapse" id="adminNavbarSupportedContent">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active-blue' : ''; ?>" href="/admin/index.php"><i class="bi bi-house-door-fill"></i> Главная</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active-blue' : ''; ?>" href="/admin/index.php"><i class="bi bi-house-door-fill me-2"></i>Главная</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_products.php' || basename($_SERVER['PHP_SELF']) == 'edit_product.php' ? 'active-blue' : ''; ?>" href="/admin/manage_products.php"><i class="bi bi-box-seam-fill"></i> Товары</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_products.php' || basename($_SERVER['PHP_SELF']) == 'edit_product.php' ? 'active-blue' : ''; ?>" href="/admin/manage_products.php"><i class="bi bi-box-seam-fill me-2"></i>Товары</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_orders.php' || basename($_SERVER['PHP_SELF']) == 'view_order.php' ? 'active-blue' : ''; ?>" href="/admin/manage_orders.php"><i class="bi bi-list-check"></i> Заказы</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_orders.php' || basename($_SERVER['PHP_SELF']) == 'view_order.php' ? 'active-blue' : ''; ?>" href="/admin/manage_orders.php"><i class="bi bi-list-check me-2"></i>Заказы</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_users.php' ? 'active-blue' : ''; ?>" href="/admin/manage_users.php"><i class="bi bi-people-fill"></i> Пользователи</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_users.php' ? 'active-blue' : ''; ?>" href="/admin/manage_users.php"><i class="bi bi-people-fill me-2"></i>Пользователи</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_product_categories_text.php' ? 'active-blue' : ''; ?>" href="/admin/manage_product_categories_text.php"><i class="bi bi-tags-fill"></i> Категории</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_product_categories_text.php' ? 'active-blue' : ''; ?>" href="/admin/manage_product_categories_text.php"><i class="bi bi-tags-fill me-2"></i>Категории</a>
                 </li>
                 <!-- Сюда можно будет добавить специфичные для админа пункты меню, например, Журнал аудита -->
                  <li class="nav-item">
-                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'audit_logs.php' ? 'active-blue' : ''; ?>" href="/admin/audit_logs.php"><i class="bi bi-journal-text"></i> Журнал аудита</a>
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'audit_logs.php' ? 'active-blue' : ''; ?>" href="/admin/audit_logs.php"><i class="bi bi-journal-text me-2"></i>Журнал аудита</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'manage_promo_codes.php' || basename($_SERVER['PHP_SELF']) == 'edit_promo_code.php' ? 'active-blue' : ''; ?>" href="/admin/manage_promo_codes.php"><i class="bi bi-ticket-perforated-fill me-2"></i>Промокоды</a>
                 </li>
             </ul>
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link" href="/" target="_blank"><i class="bi bi-box-arrow-up-right"></i> На сайт</a>
+                    <a class="nav-link" href="/" target="_blank"><i class="bi bi-box-arrow-up-right me-2"></i>На сайт</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="/admin/logout.php"><i class="bi bi-box-arrow-right"></i> Выход</a>
+                    <a class="nav-link" href="/admin/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Выход</a>
                 </li>
             </ul>
         </div>

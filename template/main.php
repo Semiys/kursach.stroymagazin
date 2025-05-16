@@ -104,7 +104,7 @@ try {
                             // Определяем путь к изображению товара
                             $image_display_path = 'template/assets/500x500.png'; // Картинка-плейсхолдер по умолчанию
                             $image_alt_text = htmlspecialchars($product['title']);
-
+                            
                             if (!empty($product['img'])) {
                                 $product_image_db_path = htmlspecialchars($product['img']); // e.g., uploads/product_images/image.jpg
                                 // file_exists() expects a path from the current script's directory.
