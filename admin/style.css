@@ -140,17 +140,32 @@ body.admin-panel-body {
 }
 
 /* Стили для навигационной панели администратора */
-.admin-navbar {
+.admin-navbar { /* Селектор .navbar.admin-navbar вернем к .admin-navbar для простоты, если нужно будет, усилим снова */
     background-color: #007bff; /* Bootstrap Primary Blue */
 }
 
 .admin-navbar .navbar-brand {
     font-weight: 600;
-    color: #ffffff; /* Белый текст для бренда на синем фоне */
+    color: #ffffff !important; /* Белый текст для бренда, с !important на всякий случай */
+    /* Убедимся, что у родителя нет opacity:0 или visibility:hidden */
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.admin-navbar .navbar-brand i.bi { /* Стили для иконки Bootstrap внутри .navbar-brand */
+    color: #ffffff !important;       /* Иконка тоже белая */
+    opacity: 1 !important;           /* Иконка полностью видима */
+    visibility: visible !important;  /* Иконка видима */
+    margin-right: 5px;               /* Небольшой отступ между иконкой и текстом */
+    vertical-align: text-bottom;     /* Попробуем выровнять иконку по тексту */
 }
 
 .admin-navbar .navbar-brand:hover {
-    color: #f0f0f0; /* Светлее белый при наведении */
+    color: #f0f0f0 !important; /* Светлее белый при наведении */
+}
+
+.admin-navbar .navbar-brand:hover i.bi {
+    color: #f0f0f0 !important; /* Иконка также меняет цвет при наведении */
 }
 
 .admin-navbar .nav-link {
@@ -213,4 +228,13 @@ body.admin-panel-body {
 .admin-panel-body h3, 
 .admin-panel-body h4 {
     color: #0056b3; /* Темно-синий для заголовков */
+}
+
+/* Исправление отступа между шапкой и контентом */
+.admin-panel-body .main-content-flex > .container:first-child,
+.admin-panel-body .main-content-flex > .container-fluid:first-child,
+.admin-panel-body .main-content-flex > .card:first-child,
+.admin-panel-body .main-content-flex > div:first-child > .card:first-child { /* Для карточки внутри .row > .col */
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 } 
