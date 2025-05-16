@@ -141,11 +141,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Handle gallery images ('gallery_images')
-    $new_gallery_images_json = $product['gallery_images']; // Keep old if no new ones are uploaded
+    $new_gallery_images_string = $product['gallery_images']; // Keep old if no new ones are uploaded
     if (isset($_FILES['gallery_images']) && empty($errors)) {
         $gallery_files = $_FILES['gallery_images'];
         $uploaded_gallery_paths = [];
         $has_gallery_uploads = false;
+        $allowed_gallery_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']; // Определение разрешенных расширений для галереи
 
         foreach ($gallery_files['name'] as $key => $name) {
             if ($gallery_files['error'][$key] === UPLOAD_ERR_OK) {
@@ -154,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $g_name = basename($name);
                 $g_ext = strtolower(pathinfo($g_name, PATHINFO_EXTENSION));
 
-                if (in_array($g_ext, $allowed_ext)) {
+                if (in_array($g_ext, $allowed_gallery_extensions)) { // Используем новую переменную
                     if ($gallery_files['size'][$key] <= 2 * 1024 * 1024) { // Max 2MB per image
                         $new_g_filename = uniqid('gallery_', true) . '.' . $g_ext;
                         $target_gallery_file = $upload_dir_relative_to_script . $new_g_filename;
@@ -176,16 +177,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($has_gallery_uploads && !empty($uploaded_gallery_paths)) {
              // TODO: Optionally delete old gallery images if $is_editing and $product['gallery_images'] had values
-            $new_gallery_images_json = json_encode($uploaded_gallery_paths);
+            // $new_gallery_images_json = json_encode($uploaded_gallery_paths); // Старый вариант с JSON
+            $new_gallery_images_string = implode(',', $uploaded_gallery_paths); // Новый вариант: строка через запятую
         } elseif ($has_gallery_uploads && empty($uploaded_gallery_paths) && empty($errors)) {
             // This case means files were selected for gallery, but all failed to upload for some reason
-            // If we want to clear gallery on failed new uploads, set to empty JSON array.
-            // For now, we keep old if new ones fail validation/upload before this point.
-            // If new ones ARE processed but ALL fail and $uploaded_gallery_paths is empty, this logic path is taken.
-            // If the intent is "replace if any new file is *selected*", even if they fail, then:
-            // $new_gallery_images_json = json_encode([]); // Clears gallery
+            // If we want to clear gallery on failed new uploads, set to empty string.
+            // $new_gallery_images_string = ''; // Clears gallery
             // Current logic: only replace if new files are *successfully* uploaded.
+            // Если оставить как есть, то $new_gallery_images_string не будет определена здесь, 
+            // и ниже $product['gallery_images'] = $new_gallery_images_string; вызовет ошибку, если это единственный путь обновления.
+            // Поэтому, если файлы были выбраны, но ни один не загрузился, очистим галерею или оставим старую.
+            // Пока оставим старую, присвоив $new_gallery_images_string текущее значение.
+            $new_gallery_images_string = $product['gallery_images'];
+        } else {
+            // Если новых загрузок не было или были ошибки до обработки галереи,
+            // $new_gallery_images_string должна остаться равной текущему значению из $product['gallery_images']
+            $new_gallery_images_string = $product['gallery_images'];
         }
+    } else {
+        // Если поле gallery_images вообще не было отправлено (например, нет input type=file multiple)
+        // или были ошибки до этапа обработки галереи, сохраняем текущее значение.
+        $new_gallery_images_string = $product['gallery_images'];
     }
 
 
@@ -215,7 +227,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindParam(':short_description', $product['short_description']);
             $stmt->bindParam(':discr', $product['discr']);
             $stmt->bindParam(':img', $new_main_image_path); // Use the potentially updated path
-            $stmt->bindParam(':gallery_images', $new_gallery_images_json); // Use the potentially updated JSON
+            // $stmt->bindParam(':gallery_images', $new_gallery_images_json); // Старый вариант с JSON
+            $stmt->bindParam(':gallery_images', $new_gallery_images_string); // Новый вариант: строка через запятую
 
             $stmt->execute();
 
@@ -230,7 +243,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // If there were errors, the script continues and will re-display the form with errors and entered values.
     // Update $product array with processed image paths if they were changed, so form shows correct state
     $product['img'] = $new_main_image_path; 
-    $product['gallery_images'] = $new_gallery_images_json;
+    // $product['gallery_images'] = $new_gallery_images_json; // Старый вариант
+    $product['gallery_images'] = $new_gallery_images_string; // Новый вариант
 
 } // End of POST request handling
 
@@ -351,7 +365,14 @@ include 'header.php';
                             <input type="file" class="form-control" id="gallery_images" name="gallery_images[]" multiple accept="image/*">
                             <?php 
                             if ($is_editing && !empty($product['gallery_images'])):
-                                $gallery_paths = json_decode($product['gallery_images'], true);
+                                // $gallery_paths = json_decode($product['gallery_images'], true); // Старый вариант с JSON
+                                // Новый вариант: если это строка, разделенная запятыми
+                                $gallery_paths_str = trim($product['gallery_images']);
+                                $gallery_paths = [];
+                                if (!empty($gallery_paths_str)) {
+                                    $gallery_paths = explode(',', $gallery_paths_str);
+                                }
+
                                 if (is_array($gallery_paths) && !empty($gallery_paths)):
                             ?>
                                 <div class="mt-2 d-flex flex-wrap">
