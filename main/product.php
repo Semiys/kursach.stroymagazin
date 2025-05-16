@@ -191,23 +191,38 @@ if ($product && !empty($product['gallery_images'])) {
     foreach ($gallery_image_names as $img_name) {
         $trimmed_name = trim($img_name);
         if (!empty($trimmed_name)) { // Убедимся, что имя файла не пустое
-            $potential_path = '../template/assets/' . htmlspecialchars($trimmed_name);
-            $absolute_potential_path = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($trimmed_name));
-            if (file_exists($absolute_potential_path)) {
-                $gallery_image_paths[] = $potential_path;
+            // Путь из БД уже относительный от корня (например, uploads/gallery/image.jpg)
+            $image_db_path = htmlspecialchars($trimmed_name);
+            $absolute_filesystem_path = __DIR__ . '/../' . $image_db_path;
+            if (file_exists($absolute_filesystem_path)) {
+                $gallery_image_paths[] = '../' . $image_db_path; // Путь для src атрибута
             }
         }
     }
 }
+
 // Добавляем основное изображение в начало галереи, если оно есть и еще не там
 if ($product && !empty($product['img'])) {
-    $main_image_path_for_gallery = '../template/assets/' . htmlspecialchars($product['img']);
-    $absolute_main_image_path = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img']));
-    if (file_exists($absolute_main_image_path) && !in_array($main_image_path_for_gallery, $gallery_image_paths)) {
-        array_unshift($gallery_image_paths, $main_image_path_for_gallery);
-    } elseif (empty($gallery_image_paths) && file_exists($absolute_main_image_path)){
-        // Если галерея пуста, но основное изображение есть, добавляем его
-        $gallery_image_paths[] = $main_image_path_for_gallery;
+    $main_image_db_path = htmlspecialchars($product['img']);
+    $main_image_src_path = '../' . $main_image_db_path;
+    $absolute_main_image_filesystem_path = __DIR__ . '/../' . $main_image_db_path;
+
+    if (file_exists($absolute_main_image_filesystem_path)) {
+        // Проверяем, нет ли уже этого изображения в галерее (с учетом '../' префикса)
+        $already_in_gallery = false;
+        foreach ($gallery_image_paths as $gallery_path) {
+            if ($gallery_path === $main_image_src_path) {
+                $already_in_gallery = true;
+                break;
+            }
+        }
+        if (!$already_in_gallery) {
+            array_unshift($gallery_image_paths, $main_image_src_path);
+        }
+    } elseif (empty($gallery_image_paths) && file_exists($absolute_main_image_filesystem_path)) {
+         // Эта ветка кажется дублирующей логику выше, но оставим на случай если первое изображение должно быть добавлено даже если галерея пуста
+         // и оно не прошло первую проверку file_exists (что маловероятно, но для безопасности)
+        $gallery_image_paths[] = $main_image_src_path;
     }
 }
 
@@ -250,6 +265,10 @@ if ($discount > 0) {
     $discounted_price = $original_price * (1 - $discount / 100);
 }
 
+// Определяем количество товара в корзине для отображения на кнопке
+$quantity_in_cart = isset($_SESSION['cart'][$product_id]) ? $_SESSION['cart'][$product_id] : 0;
+$stock_quantity = isset($product['stock_quantity']) ? (int)$product['stock_quantity'] : 0;
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -290,23 +309,32 @@ if ($discount > 0) {
             <!-- Product Images -->
             <div class="col-md-6 mb-4">
                 <?php
-                $mainImagePath = '../template/assets/500x500.png'; // Заглушка по умолчанию
+                $main_image_display_path = '../template/assets/500x500.png'; // Заглушка по умолчанию
+                // Используем htmlspecialchars для title один раз, если он есть, или общее сообщение
+                $main_image_alt_text = htmlspecialchars($product['title'] ?? 'Изображение товара');
+
                 if ($product && !empty($product['img'])) {
-                    $potentialImagePath = '../template/assets/' . htmlspecialchars($product['img']);
-                    $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img']));
-                    if (file_exists($absolutePotentialImagePath)) {
-                        $mainImagePath = $potentialImagePath;
+                    $current_product_image_db_path = htmlspecialchars($product['img']);
+                    // Путь из БД (например, uploads/product_images/image.jpg) уже относительный от корня.
+                    // Для file_exists нужен путь от текущего файла (__DIR__) до корня сайта ('/../') и затем путь из БД.
+                    $current_product_image_filesystem_path = __DIR__ . '/../' . $current_product_image_db_path;
+                    // Для src атрибута нужен путь от текущей директории (main/) до корня сайта ('../') и затем путь из БД.
+                    $current_product_image_src_path = '../' . $current_product_image_db_path;
+
+                    if (file_exists($current_product_image_filesystem_path)) {
+                        $main_image_display_path = $current_product_image_src_path;
+                        // $main_image_alt_text уже установлен с названием товара, если оно есть
                     }
                 }
                 ?>
-                <img src="<?php echo $mainImagePath; ?>" alt="<?php echo htmlspecialchars($product['title'] ?? 'Изображение товара'); ?>" class="img-fluid rounded mb-3" id="mainImage">
+                <img src="<?php echo $main_image_display_path; ?>" alt="<?php echo $main_image_alt_text; ?>" class="img-fluid rounded mb-3" id="mainImage">
                 <?php if (!empty($gallery_image_paths) && count($gallery_image_paths) > 1): ?>
                 <div class="row gx-2 gy-2 mt-2 thumbnail-gallery">
                     <?php foreach ($gallery_image_paths as $index => $thumb_path): ?>
                     <div class="col-3">
                         <img src="<?php echo $thumb_path; ?>"
                              alt="Thumbnail <?php echo $index + 1; ?>"
-                             class="img-fluid rounded thumbnail <?php if ($thumb_path === $mainImagePath) echo 'active'; ?>"
+                             class="img-fluid rounded thumbnail <?php if ($thumb_path === $main_image_display_path) echo 'active'; ?>"
                              onclick="changeImage(event, this.src)"
                              style="cursor: pointer; border: 2px solid transparent;">
                     </div>

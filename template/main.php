@@ -102,19 +102,26 @@ try {
                             <div class="position-relative">
                             <?php
                             // Определяем путь к изображению товара
-                            $imagePath = 'template/assets/500x500.png'; // Картинка по умолчанию
-                            
+                            $image_display_path = 'template/assets/500x500.png'; // Картинка-плейсхолдер по умолчанию
+                            $image_alt_text = htmlspecialchars($product['title']);
+
                             if (!empty($product['img'])) {
-                                $potentialImagePath = 'template/assets/' . htmlspecialchars($product['img']);
-                                $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img']));
+                                $product_image_db_path = htmlspecialchars($product['img']); // e.g., uploads/product_images/image.jpg
+                                // file_exists() expects a path from the current script's directory.
+                                // __DIR__ is /template, $product_image_db_path is root-relative.
+                                $image_filesystem_path = __DIR__ . '/../' . $product_image_db_path; 
                                 
-                                if (file_exists($absolutePotentialImagePath)) {
-                                    $imagePath = $potentialImagePath;
+                                if (file_exists($image_filesystem_path)) {
+                                    // src path should also be relative from the current script's location.
+                                    $image_display_path = '../' . $product_image_db_path;
+                                } else {
+                                    // Если файл не найден, можно залогировать или оставить плейсхолдер
+                                    // error_log("Image not found for product ID {$product['id']}: {$image_filesystem_path}");
                                 }
                             }
                             ?>
                             <a href="/main/product.php?id=<?php echo $product['id']; ?>">
-                                <img src="<?php echo $imagePath; ?>" class="product-image w-100" alt="<?php echo htmlspecialchars($product['title']); ?>">
+                                <img src="<?php echo $image_display_path; ?>" class="product-image w-100" alt="<?php echo $image_alt_text; ?>">
                             </a>
                             <div class="position-absolute top-0 start-0" style="padding-left: 6px; padding-top: 2px;">
                                 <?php if ($discount_percentage > 0): ?>

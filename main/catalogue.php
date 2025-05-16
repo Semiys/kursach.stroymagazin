@@ -487,22 +487,33 @@ try {
                                 <div class="product-card shadow-sm h-100">
                                     <div class="position-relative product-image-container">
                                         <?php
-                                        // Если $product['img'] пусто или файл не существует
-                                        // показываем заглушку.
-                                        $defaultImagePath = '../template/assets/500x500.png';
-                                        $imagePath = $defaultImagePath; // По умолчанию ставим заглушку
+                                        $defaultImagePath = '../template/assets/500x500.png'; // Путь к заглушке относительно текущего файла (main/catalogue.php)
+                                        $imagePath = $defaultImagePath; // По умолчанию
+                                        $imageUrl = $defaultImagePath; // URL для <img>
 
                                         if (!empty($product['img'])) {
-                                            $potentialImagePath = '../template/assets/' . htmlspecialchars($product['img']);
-                                            $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img'])); 
+                                            // $product['img'] содержит что-то вроде "uploads/product_images/filename.jpg"
+                                            // Это путь от корня сайта.
                                             
-                                            if (file_exists($absolutePotentialImagePath)) {
-                                                $imagePath = $potentialImagePath; 
+                                            // Абсолютный путь на сервере для проверки существования файла
+                                            // __DIR__ это /main, поэтому выходим на один уровень вверх в корень сайта
+                                            $absoluteServerPath = __DIR__ . '/../' . $product['img']; 
+
+                                            // Относительный URL для использования в <img>, также от корня сайта
+                                            // Для файла /main/catalogue.php, чтобы сослаться на /uploads/, нужно ../uploads/
+                                            $relativeUrlForImg = '../' . $product['img'];
+
+                                            if (file_exists($absoluteServerPath)) {
+                                                $imagePath = $relativeUrlForImg; // Для обратной совместимости, если $imagePath где-то еще используется
+                                                $imageUrl = $relativeUrlForImg;
+                                            } else {
+                                                // Можно добавить лог, если файл не найден, а в БД путь есть
+                                                error_log("Product image not found at: " . $absoluteServerPath . " for product ID: " . $product['id']);
                                             }
                                         }
                                         ?>
                                         <a href="product.php?id=<?php echo $product['id']; ?>">
-                                            <img src="<?php echo $imagePath; ?>" class="product-image w-100" alt="<?php echo htmlspecialchars($product['title']); ?>">
+                                            <img src="<?php echo htmlspecialchars($imageUrl); ?>" class="card-img-top product-image" alt="<?php echo htmlspecialchars($product['title']); ?>">
                                         </a>
                                         <?php 
                                         // Добавляем бейджи скидки и хитов на изображение товара

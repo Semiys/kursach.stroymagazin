@@ -545,17 +545,23 @@ function sendOrderConfirmationEmail($email, $name, $order_id, $order_date, $orde
                             <div class="d-flex mb-2">
                                 <div class="flex-shrink-0">
                                     <?php
-                                    $defaultImagePath = '../template/assets/500x500.png';
-                                    $imagePath = $defaultImagePath;
+                                    $image_display_path = '../template/assets/500x500.png'; // Плейсхолдер по умолчанию
+                                    $image_alt_text = htmlspecialchars($product['title']);
+
                                     if (!empty($product['img'])) {
-                                        $potentialImagePath = '../template/assets/' . htmlspecialchars($product['img']);
-                                        $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($product['img'])); 
-                                        if (file_exists($absolutePotentialImagePath)) {
-                                            $imagePath = $potentialImagePath; 
+                                        $product_image_db_path = htmlspecialchars($product['img']); // e.g., uploads/product_images/image.jpg
+                                        // __DIR__ is /main, $product_image_db_path is root-relative (uploads/...)
+                                        $image_filesystem_path = __DIR__ . '/../' . $product_image_db_path;
+                                        
+                                        if (file_exists($image_filesystem_path)) {
+                                            // src path is also relative from /main
+                                            $image_display_path = '../' . $product_image_db_path;
+                                        } else {
+                                            // error_log("Checkout: Image not found for product ID {$product['id']}: {$image_filesystem_path}");
                                         }
                                     }
                                     ?>
-                                    <img src="<?php echo $imagePath; ?>" alt="<?php echo htmlspecialchars($product['title']); ?>" width="50" class="rounded">
+                                    <img src="<?php echo $image_display_path; ?>" alt="<?php echo $image_alt_text; ?>" width="50" class="rounded">
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <div class="d-flex justify-content-between">

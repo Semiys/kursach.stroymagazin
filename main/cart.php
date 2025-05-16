@@ -201,21 +201,23 @@ $grand_total = $total_cart_value + $shipping_cost - $discount_amount;
                                 <div class="row cart-item mb-3 align-items-center" id="cart-item-row-<?php echo $item['id']; ?>">
                                     <div class="col-md-2 col-sm-3">
                                         <?php
-                                        // Если $item['img'] пусто или файл не существует
-                                        // показываем заглушку.
-                                        $defaultImagePath = '../template/assets/500x500.png';
-                                        $imagePath = $defaultImagePath; // По умолчанию ставим заглушку
+                                        $image_display_path = '../template/assets/500x500.png'; // Плейсхолдер по умолчанию
+                                        $image_alt_text = htmlspecialchars($item['title']);
 
                                         if (!empty($item['img'])) {
-                                            $potentialImagePath = '../template/assets/' . htmlspecialchars($item['img']);
-                                            $absolutePotentialImagePath = __DIR__ . '/../template/assets/' . basename(htmlspecialchars($item['img'])); 
-                                            
-                                            if (file_exists($absolutePotentialImagePath)) {
-                                                $imagePath = $potentialImagePath; 
+                                            $item_image_db_path = htmlspecialchars($item['img']); // e.g., uploads/product_images/image.jpg
+                                            // __DIR__ is /main, $item_image_db_path is root-relative (uploads/...)
+                                            $image_filesystem_path = __DIR__ . '/../' . $item_image_db_path;
+
+                                            if (file_exists($image_filesystem_path)) {
+                                                // src path is also relative from /main
+                                                $image_display_path = '../' . $item_image_db_path;
+                                            } else {
+                                                // error_log("Cart: Image not found for product ID {$item['id']}: {$image_filesystem_path}");
                                             }
                                         }
                                         ?>
-                                        <img src="<?php echo $imagePath; ?>" alt="<?php echo htmlspecialchars($item['title']); ?>" class="img-fluid rounded">
+                                        <img src="<?php echo $image_display_path; ?>" alt="<?php echo $image_alt_text; ?>" class="img-fluid rounded">
                                     </div>
                                     <div class="col-md-4 col-sm-9">
                                         <h6 class="card-title mb-1"><?php echo htmlspecialchars($item['title']); ?></h6>
